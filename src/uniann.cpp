@@ -25,6 +25,7 @@ static const array<string, NUM_STATES> state_name = {
 static const double NEG_INF = -1e9;
 static const int MIN_INTRON = 30;
 static const int MIN_EXON   = 40;
+static const int MIN_INTER  = 200;
 
 //------------------------------------------------------------
 // Helpers
@@ -196,6 +197,7 @@ struct DPCell {
     int bt;
     int intron_len;
     int exon_len;
+    int inter_len;
 };
 
 vector<vector<DPCell>> init_dp(int L,
@@ -212,6 +214,7 @@ vector<vector<DPCell>> init_dp(int L,
         dp[0][s].bt = -1;
         dp[0][s].intron_len = is_intron(s) ? 1 : 0;
         dp[0][s].exon_len   = is_exon(s)   ? 1 : 0;
+        dp[0][s].inter_len  = (s == 0)   ? 1 : 0;
     }
 
     return dp;
@@ -345,8 +348,8 @@ void run_viterbi(
                     codon.push_back(seq[i - 2]);
                     codon.push_back(seq[i - 1]);
                     codon.push_back(seq[i]);
-
-                    if (codon == "ATG") {
+                    int len = dp[i - 1][from].inter_len + 2;
+                    if (codon == "ATG" && len >= MIN_INTER) {
 
                         cerr << "DEBUG at " << i
                              << " trying transition " << state_name[from]
@@ -398,6 +401,16 @@ void run_viterbi(
                     dp[i][to].exon_len = 1;
             } else {
                 dp[i][to].exon_len = 0;
+            }
+
+            // Track inter length
+            if (to == 0) {
+                if (best_from == 0)
+                    dp[i][to].inter_len = dp[i - 1][best_from].inter_len + 1;
+                else
+                    dp[i][to].inter_len = 1;
+            } else {
+                dp[i][to].inter_len = 0;
             }
         }
     }
