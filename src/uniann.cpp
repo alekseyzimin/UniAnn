@@ -250,6 +250,18 @@ void run_viterbi(
         }
 
         for (int to = 0; to < NUM_STATES; to++) {
+            
+            if (is_exon(to) && is_stop) {
+                int frame = to - 1;
+                if (((i - 2) % 3) == frame) {
+                    dp[0][to].dp = -1e9;
+                    dp[0][to].bt = -1;
+                    dp[0][to].intron_len = 0;
+                    dp[0][to].exon_len   = 0;
+                    dp[0][to].inter_len  = 0;
+                    continue;
+                }
+            }
 
             double emit_log = emit[i][to];
 
@@ -548,11 +560,14 @@ void write_gff_from_path(
           end = i - 1;
           if (current_state == "N")
             end = i - 2;
-
+          if (labels[i] == "N")
+            end = i + 1;
           if (end > start) 
               write_gff_feature(seqid, current_state, start, end, f_fasta, best_final);
           if (current_state == "N"){
             start = i - 2;
+          } else if (labels[i] == "N" ){
+            start = i + 2;
           } else {
             start = i;
           }
