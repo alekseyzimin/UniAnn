@@ -266,14 +266,18 @@ for my $g(keys %genome_seqs){
   @psauron_frame0=split(/;/,$psauron_scores[0]);
   @psauron_frame1=split(/;/,$psauron_scores[1]);
   @psauron_frame2=split(/;/,$psauron_scores[2]);
+  my $mult=30;
   for(my $i=0;$i<$#psauron_frame0;$i++){
-    $psauron_frame0[$i]=log($psauron_frame0[$i]*20+1e-6)/log(20);
+    $psauron_frame0[$i]=log($psauron_frame0[$i]*$mult+1e-6)/log($mult);
+    #$psauron_frame0[$i]=($psauron_frame0[$i]-0.5)*2;
   }
   for(my $i=0;$i<$#psauron_frame1;$i++){
-    $psauron_frame1[$i]=log($psauron_frame1[$i]*20+1e-6)/log(20);
+    $psauron_frame1[$i]=log($psauron_frame1[$i]*$mult+1e-6)/log($mult);
+    #$psauron_frame1[$i]=($psauron_frame1[$i]-0.5)*2;
   }
   for(my $i=0;$i<$#psauron_frame2;$i++){
-    $psauron_frame2[$i]=log($psauron_frame2[$i]*20+1e-6)/log(20);
+    $psauron_frame2[$i]=log($psauron_frame2[$i]*$mult+1e-6)/log($mult);
+    #$psauron_frame2[$i]=($psauron_frame2[$i]-0.5)*2;
   }
   my $j=0;
   #insert large negative score for an in frame stop 
@@ -360,7 +364,7 @@ for my $g(keys %genome_seqs){
     $max_score=$p1 if($p1>$max_score);
     $max_score=$p2 if($p2>$max_score);
     if($p0==-1e6 || $p1==-1e6 || $p2==-1e6){#stop in frame 0,1 or 2
-      $scoreN=1;
+      $scoreN=10;
       $scoreI=-3;
     }else{
       $scoreN=-$max_score;
