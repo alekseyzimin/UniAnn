@@ -250,15 +250,14 @@ void run_viterbi(
         }
 
         for (int to = 0; to < NUM_STATES; to++) {
-           /* 
+            /*
             if (is_exon(to) && is_stop) {
-                int frame = to - 1;
-                if (((i - 2) % 3) == frame) {
-                    dp[0][to].dp = -1e9;
-                    dp[0][to].bt = -1;
-                    dp[0][to].intron_len = 0;
-                    dp[0][to].exon_len   = 0;
-                    dp[0][to].inter_len  = 0;
+                if (((i - 2) % 3) == to - 1) {
+                    dp[i][to].dp = -1e9;
+                    dp[i][to].bt = -1;
+                    dp[i][to].intron_len = 0;
+                    dp[i][to].exon_len   = 0;
+                    dp[i][to].inter_len  = 0;
                     continue;
                 }
             }
@@ -276,6 +275,13 @@ void run_viterbi(
             for (int from = 0; from < NUM_STATES; from++) {
 
                 double log_t = trans[from][to];
+
+                //prohibit staying in the exon if a stop is found
+                if (is_exon(to) && is_exon(from) && from==to && is_stop) {
+                  if (((i - 2) % 3) == to - 1) {
+                    log_t = -1e9;
+                  }
+                }
 
                 //--------------------------------------------------------
                 // Exon → Intron only at GT AND only if exon length ≥ MIN_EXON
