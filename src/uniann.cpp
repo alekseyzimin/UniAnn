@@ -205,9 +205,9 @@ vector<vector<DPCell>> init_dp(int L,
 {
     vector<vector<DPCell>> dp(L, vector<DPCell>(NUM_STATES));
 
-    // Initialization at position 0 — force start in E0
+    // Initialization at position 0 — force start in N
     for (int s = 0; s < NUM_STATES; s++) {
-        double start_prob = (s == 1 ? 0.0 : -1e9);
+        double start_prob = (s == 0 ? 0.0 : -1e9);
         double e = emit[0][s];
 
         dp[0][s].dp = start_prob + e;
@@ -236,6 +236,9 @@ void run_viterbi(
     for (int i = 1; i < L; i++) {
         char b_prev = seq[i - 1];
         char b      = seq[i];
+
+        // on stop do not allow to continue in the same exon
+        
 
         for (int to = 0; to < NUM_STATES; to++) {
 
@@ -349,7 +352,7 @@ void run_viterbi(
                     codon.push_back(seq[i - 1]);
                     codon.push_back(seq[i]);
                     int len = dp[i - 1][from].inter_len + 2;
-                    if (codon == "ATG" && len >= MIN_INTER) {
+                    if (codon == "ATG" && (len >= MIN_INTER || i < MIN_INTER)) {
 
                         cerr << "DEBUG at " << i
                              << " trying transition " << state_name[from]
@@ -538,12 +541,22 @@ void write_gff_from_path(
 
     string current_state = labels[0];
     int start = 0;
+    int end = 0;
 
     for (size_t i = 1; i < labels.size(); i++) {
         if (labels[i] != current_state) {
-            write_gff_feature(seqid, current_state, start, i - 1, f_fasta, best_final);
-            current_state = labels[i];
+          end = i - 1;
+          if (current_state == "N")
+            end = i - 2;
+
+          if (end > start) 
+              write_gff_feature(seqid, current_state, start, end, f_fasta, best_final);
+          if (current_state == "N"){
+            start = i - 2;
+          } else {
             start = i;
+          }
+          current_state = labels[i];
         }
     }
 
