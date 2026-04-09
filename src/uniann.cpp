@@ -250,7 +250,7 @@ void run_viterbi(
         }
 
         for (int to = 0; to < NUM_STATES; to++) {
-            
+           /* 
             if (is_exon(to) && is_stop) {
                 int frame = to - 1;
                 if (((i - 2) % 3) == frame) {
@@ -262,7 +262,7 @@ void run_viterbi(
                     continue;
                 }
             }
-
+*/
             double emit_log = emit[i][to];
 
             // Fix for TAG stop where AG is acceptor
