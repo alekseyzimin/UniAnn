@@ -173,17 +173,17 @@ vector<vector<double>> init_transitions() {
 
 
     // Noncoding self
-    trans[0][0] = 0;
+    trans[0][0] = 1;
 
     // Exon frame cycling: none (self only)
-    trans[1][1] = 0;
-    trans[2][2] = 0;
-    trans[3][3] = 0;
+    trans[1][1] = 1;
+    trans[2][2] = 1;
+    trans[3][3] = 1;
 
     // Intron states: self only
-    trans[4][4] = 0;
-    trans[5][5] = 0;
-    trans[6][6] = 0;
+    trans[4][4] = 1;
+    trans[5][5] = 1;
+    trans[6][6] = 1;
 
     return trans;
 }
@@ -276,11 +276,11 @@ void run_viterbi(
                 double log_t = trans[from][to];
 
                 //prohibit staying in the exon if a stop is found
-                //if (is_exon(to) && is_exon(from) && from==to && is_stop) {
-                //  if (((i - 2) % 3) == to - 1) {
-                //    log_t = -1e9;
-                //  }
-               // }
+                if (is_exon(to) && is_exon(from) && from==to && is_stop) {
+                  if (((i - 2) % 3) == to - 1) {
+                    log_t = -1e9;
+                  }
+                }
 
                 //--------------------------------------------------------
                 // Exon → Intron only at GT AND only if exon length ≥ MIN_EXON
