@@ -171,20 +171,19 @@ void safety_check_gt_ag(
 vector<vector<double>> init_transitions() {
     vector<vector<double>> trans(NUM_STATES, vector<double>(NUM_STATES, -1e9));
 
-    double max_log_prob = 1.0;
 
     // Noncoding self
-    trans[0][0] = log(1.0);
+    trans[0][0] = 0;
 
     // Exon frame cycling: none (self only)
-    trans[1][1] = max_log_prob;
-    trans[2][2] = max_log_prob;
-    trans[3][3] = max_log_prob;
+    trans[1][1] = 0;
+    trans[2][2] = 0;
+    trans[3][3] = 0;
 
     // Intron states: self only
-    trans[4][4] = max_log_prob;
-    trans[5][5] = max_log_prob;
-    trans[6][6] = max_log_prob;
+    trans[4][4] = 0;
+    trans[5][5] = 0;
+    trans[6][6] = 0;
 
     return trans;
 }
@@ -277,11 +276,11 @@ void run_viterbi(
                 double log_t = trans[from][to];
 
                 //prohibit staying in the exon if a stop is found
-                if (is_exon(to) && is_exon(from) && from==to && is_stop) {
-                  if (((i - 2) % 3) == to - 1) {
-                    log_t = -1e9;
-                  }
-                }
+                //if (is_exon(to) && is_exon(from) && from==to && is_stop) {
+                //  if (((i - 2) % 3) == to - 1) {
+                //    log_t = -1e9;
+                //  }
+               // }
 
                 //--------------------------------------------------------
                 // Exon → Intron only at GT AND only if exon length ≥ MIN_EXON
