@@ -236,9 +236,18 @@ void run_viterbi(
     for (int i = 1; i < L; i++) {
         char b_prev = seq[i - 1];
         char b      = seq[i];
+        bool is_stop = false;
 
         // on stop do not allow to continue in the same exon
-        
+        if ( i >= 2 ) {
+          string codon;
+          codon.push_back(seq[i - 2]);
+          codon.push_back(seq[i - 1]);
+          codon.push_back(seq[i]);
+
+          if (codon == "TAA" || codon == "TAG" || codon == "TGA") 
+            is_stop = true;
+        }
 
         for (int to = 0; to < NUM_STATES; to++) {
 
@@ -320,27 +329,18 @@ void run_viterbi(
                 //--------------------------------------------------------
                 // Exon → Noncoding after STOP codon (TAA, TAG, TGA)
                 //--------------------------------------------------------
-                if (is_exon(from) && to == 0 && i >= 2) {
-                    string codon;
-                    codon.push_back(seq[i - 2]);
-                    codon.push_back(seq[i - 1]);
-                    codon.push_back(seq[i]);
-
-                    if (codon == "TAA" || codon == "TAG" || codon == "TGA") {
-
-                        cerr << "DEBUG at " << i
+                if (is_exon(from) && to == 0 && is_stop) {
+                    cerr << "DEBUG at " << i
                              << " trying transition " << state_name[from]
                              << " " << state_name[to]
                              << " score " << dp[i - 1][from].dp
                              << " emission " << emit_log << "\n";
 
-                        int frame = from - 1;
-                        if (((i - 2) % 3) == frame) {
-                            log_t = 1.0; // max_log_prob
-                        }
-
-                        cerr << "DEBUG probability " << log_t << "\n";
+                    int frame = from - 1;
+                    if (((i - 2) % 3) == frame) {
+                        log_t = 1.0; // max_log_prob
                     }
+                    cerr << "DEBUG probability " << log_t << "\n";
                 }
 
                 //--------------------------------------------------------
