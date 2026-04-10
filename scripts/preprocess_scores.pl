@@ -346,9 +346,10 @@ for my $g(keys %genome_seqs){
   my ($p0,$p1,$p2)=(0,0,0);
   my ($pp0,$pp1,$pp2)=(0,0,0);
   for(my $i=0;$i<length($seq_fwd);$i++){
+    ($p0,$p1,$p2)=(0,0,0);
     $p0=$psauron_frame0[int($i/3)] if defined($psauron_frame0[int($i/3)]);
-    $p1=$psauron_frame1[int(($i-1)/3)] if defined($psauron_frame1[int(($i-1)/3)]);
-    $p2=$psauron_frame2[int(($i-2)/3)] if defined($psauron_frame2[int(($i-2)/3)]);
+    $p1=$psauron_frame1[int(($i-1)/3)] if ($i>0);
+    $p2=$psauron_frame2[int(($i-2)/3)] if ($i>1);
     if($i%3==0 || $i%3==1){
       $p0=$pp0 if($p0==-1e6);
     }
@@ -371,7 +372,9 @@ for my $g(keys %genome_seqs){
       $scoreI=-$max_score;
     }
     printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI,$scoreI,$scoreI,substr($seq_fwd,$i,1);
-    ($pp0,$pp1,$pp2)=($p0,$p1,$p2);
+    $pp0=$p0 if($p0 > -1e6);
+    $pp1=$p1 if($p1 > -1e6);
+    $pp2=$p2 if($p2 > -1e6);
   }
   my $splice_t=-1.5;
   for(my $i=0;$i<length($seq_fwd);$i++){
