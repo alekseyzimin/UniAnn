@@ -533,7 +533,7 @@ void write_gff_feature(
          << start << "\t"
          << end << "\t"
          << bf << "\t"
-         << "." << "\t"
+         << "+" << "\t"
          << "." << "\t"
          << "Parent=" << tname << "." << gff_index
          << ";state=" << state
