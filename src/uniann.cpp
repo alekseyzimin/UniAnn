@@ -572,7 +572,7 @@ void write_gff_from_path(
   cout << "##gff-version 3\n";
   string current_state = labels[0];
   string previous_state = labels[0];
-  double score = scores[0];
+  double score_offset = scores[0];
 
   int start = 0;
   int end = 0;
@@ -588,15 +588,16 @@ void write_gff_from_path(
       }
       if(end > start) {
         if(is_label_exon(current_state) && is_label_intron(previous_state)) {
-          write_gff_feature(seqid, current_state, start+2, end, f_fasta, scores[i]);
+          write_gff_feature(seqid, current_state, start+2, end, f_fasta, scores[i]-score_offset);
         }else if(is_label_intron(current_state) && is_label_exon(previous_state)) {
-          write_gff_feature(seqid, current_state, start, end+2, f_fasta, scores[i]);
+          write_gff_feature(seqid, current_state, start, end+2, f_fasta, scores[i]-score_offset);
         }else{
-          write_gff_feature(seqid, current_state, start, end, f_fasta, scores[i]); 
+          write_gff_feature(seqid, current_state, start, end, f_fasta, scores[i]-score_offset); 
         }
       }
       if (current_state == "N"){
         start = i - 1;
+        score_offset = scores[i];
       } else if (labels[i] == "N" ){
         start = i + 2;
       } else {
