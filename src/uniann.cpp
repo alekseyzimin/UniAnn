@@ -171,19 +171,20 @@ void safety_check_gt_ag(
 vector<vector<double>> init_transitions() {
     vector<vector<double>> trans(NUM_STATES, vector<double>(NUM_STATES, -1e9));
 
+    double self_prob = 0.9;
 
     // Noncoding self
-    trans[0][0] = 1;
+    trans[0][0] = self_prob;
 
     // Exon frame cycling: none (self only)
-    trans[1][1] = 1;
-    trans[2][2] = 1;
-    trans[3][3] = 1;
+    trans[1][1] = self_prob;
+    trans[2][2] = self_prob;
+    trans[3][3] = self_prob;
 
     // Intron states: self only
-    trans[4][4] = 1;
-    trans[5][5] = 1;
-    trans[6][6] = 1;
+    trans[4][4] = self_prob;
+    trans[5][5] = self_prob;
+    trans[6][6] = self_prob;
 
     return trans;
 }
@@ -378,7 +379,7 @@ void run_viterbi(
                              << " emission " << emit_log << "\n";
 
                         int frame = to - 1;
-                        if (((i - 2) % 3) == frame) {
+                        if (((i - 2) % 3) == frame && emit_log > 0) { //only in the right frame and if psauron score is positive in this frame
                             log_t = 1.0;
                         }
 
