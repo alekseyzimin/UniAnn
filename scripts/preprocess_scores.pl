@@ -267,17 +267,18 @@ for my $g(keys %genome_seqs){
   @psauron_frame1=split(/;/,$psauron_scores[1]);
   @psauron_frame2=split(/;/,$psauron_scores[2]);
   my $mult=30;
+  my $off=0.2;
   for(my $i=0;$i<$#psauron_frame0;$i++){
     $psauron_frame0[$i]=log($psauron_frame0[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame0[$i]=($psauron_frame0[$i]-0.5)*2;
+    #$psauron_frame0[$i]=($psauron_frame0[$i]-$off)/(1-$off);
   }
   for(my $i=0;$i<$#psauron_frame1;$i++){
     $psauron_frame1[$i]=log($psauron_frame1[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame1[$i]=($psauron_frame1[$i]-0.5)*2;
+    #$psauron_frame1[$i]=($psauron_frame1[$i]-$off)/(1-$off);
   }
   for(my $i=0;$i<$#psauron_frame2;$i++){
     $psauron_frame2[$i]=log($psauron_frame2[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame2[$i]=($psauron_frame2[$i]-0.5)*2;
+    #$psauron_frame2[$i]=($psauron_frame2[$i]-$off)/(1-$off);
   }
   my $j=0;
   #insert large negative score for an in frame stop 
@@ -359,19 +360,28 @@ for my $g(keys %genome_seqs){
     if($i%3==2 || $i%3==0){
       $p2=$pp2 if($p2==-1e6);
     }
-    my $scoreN=0;
-    my $scoreI=0;
+
     my $max_score=$p0;
     $max_score=$p1 if($p1>$max_score);
     $max_score=$p2 if($p2>$max_score);
-    if($p0==-1e6 || $p1==-1e6 || $p2==-1e6){#stop in frame 0,1 or 2
-      $scoreN=1;
-      $scoreI=-3;
-    }else{
-      $scoreN=-$max_score;
-      $scoreI=-$max_score;
+    my $scoreN=0.1-$max_score;
+    my $scoreI0=0.1-$max_score;
+    my $scoreI1=0.1-$max_score;
+    my $scoreI2=0.1-$max_score;
+
+    if($p0==-1e6){#stop in frame 0,1 or 2
+      $scoreN=10;
+      $scoreI0=-1;
     }
-    printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI,$scoreI,$scoreI,substr($seq_fwd,$i,1);
+    if($p1==-1e6){#stop in frame 0,1 or 2
+      $scoreN=10;
+      $scoreI1=-1;
+    }
+    if($p2==-1e6){#stop in frame 0,1 or 2
+      $scoreN=10;
+      $scoreI2=-1;
+    }
+    printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI0,$scoreI1,$scoreI2,substr($seq_fwd,$i,1);
     $pp0=$p0 if($p0 > -1e6);
     $pp1=$p1 if($p1 > -1e6);
     $pp2=$p2 if($p2 > -1e6);
