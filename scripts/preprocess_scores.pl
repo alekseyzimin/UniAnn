@@ -396,7 +396,7 @@ for my $g(keys %genome_seqs){
   }
   for(my $i=0;$i<length($seq_fwd);$i++){
     if(defined($acceptor_fwd_hmm2_score{$i})){
-      $acceptor_fwd_hmm2_score{$i}=($acceptor_fwd_hmm2_score{$i}>($splice_t*2))?$acceptor_fwd_hmm2_score{$i}*60:-1e3;
+      $acceptor_fwd_hmm2_score{$i}=($acceptor_fwd_hmm2_score{$i}>($splice_t*2))?$acceptor_fwd_hmm2_score{$i}*50:-1e3;
       #print FILEAG "$g $i\t",$acceptor_fwd_hmm2_score{$i},"\n";
       print FILEAG "$i\t",$acceptor_fwd_hmm2_score{$i},"\n";
     }
