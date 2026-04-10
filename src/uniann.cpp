@@ -153,8 +153,8 @@ void safety_check_gt_ag(
         // Check GT
         if (gt_score[pos] > -1e8) {
             string dinuc;
-            dinuc.push_back(seq[pos]);
-            dinuc.push_back(seq[pos + 1]);
+            dinuc.push_back(toupper(seq[pos]));
+            dinuc.push_back(toupper(seq[pos + 1]));
             if (dinuc != "GT") {
                 cerr << "WARNING: GT score at position "
                      << pos << " but sequence has " << dinuc << "\n";
@@ -164,8 +164,8 @@ void safety_check_gt_ag(
         // Check AG
         if (ag_score[pos] > -1e8) {
             string dinuc;
-            dinuc.push_back(seq[pos]);
-            dinuc.push_back(seq[pos + 1]);
+            dinuc.push_back(toupper(seq[pos]));
+            dinuc.push_back(toupper(seq[pos + 1]));
             if (dinuc != "AG") {
                 cerr << "WARNING: AG score at position "
                      << pos << " but sequence has " << dinuc << "\n";
