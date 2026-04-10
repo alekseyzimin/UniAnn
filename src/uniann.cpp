@@ -39,6 +39,15 @@ inline bool is_intron(int s) {
     return (s == 4 || s == 5 || s == 6);
 }
 
+inline bool is_label_exon(string s) {
+    return (s == "E0" || s == "E1" || s == "E2");
+}
+
+inline bool is_label_intron(string s) {
+    return (s == "I0" || s == "I1" || s == "I2");
+}
+
+
 //------------------------------------------------------------
 // Read FASTA (single sequence)
 //------------------------------------------------------------
@@ -358,7 +367,7 @@ void run_viterbi(
                     codon.push_back(seq[i - 1]);
                     codon.push_back(seq[i]);
                     int len = dp[i - 1][from].inter_len + 2;
-                    if (codon == "ATG" && (len >= MIN_INTER || i < MIN_INTER)) {
+                    if (codon == "ATG" && (len >= MIN_INTER || i < MIN_INTER) && dp[i-1][from].bt == 0) { //must come from non-coding
 
                         cerr << "DEBUG at " << i
                              << " trying transition " << state_name[from]
@@ -499,22 +508,19 @@ void write_gff_feature(
     int start = start0;   // 0-based
     int end   = end0;
 
-    // Perl logic: if start0 == 0, decrement start0
-    if (start0 == 0) start0--;
-
     string type;
 
     if (state[0] == 'E') {
         type = "CDS";
-        start = start0 + 2;
+        start = start0;
     }
     else if (state[0] == 'I') {
         type = "intron";
-        end = end0 + 2;
+        end = end0;
     }
     else {
         type = "region";   // noncoding
-        end = end0 + 2;
+        end = end0;
         gff_index++;
     }
 
@@ -542,36 +548,44 @@ void write_gff_from_path(
     const string &seqid,
     const string &f_fasta,
     double best_final
-) {
-    cout << "##gff-version 3\n";
+) { 
+  cout << "##gff-version 3\n";
+  string current_state = labels[0];
+  string previous_state = labels[0];
 
-    string current_state = labels[0];
+  int start = 0;
+  int end = 0;
 
-    int start = 0;
-    int end = 0;
-
-    for (size_t i = 1; i < labels.size(); i++) {
-        if (labels[i] != current_state) {
-          end = i - 1;
-          if (current_state == "N")
-            end = i - 2;
-          if (labels[i] == "N")
-            end = i + 1;
-          if (end > start) 
-              write_gff_feature(seqid, current_state, start, end, f_fasta, best_final);
-          if (current_state == "N"){
-            start = i - 2;
-          } else if (labels[i] == "N" ){
-            start = i + 2;
-          } else {
-            start = i;
-          }
-          current_state = labels[i];
+  for (size_t i = 1; i < labels.size(); i++) {
+    if (labels[i] != current_state) {
+      end = i - 1;
+      if (current_state == "N")
+        end = i - 2;
+      if (labels[i] == "N")
+        end = i + 1;
+      if(end > start) {
+        if(is_label_exon(current_state) && is_label_intron(previous_state)) {
+          write_gff_feature(seqid, current_state, start+2, end, f_fasta, best_final);
+        }else if(is_label_intron(current_state) && is_label_exon(previous_state)) {
+          write_gff_feature(seqid, current_state, start, end+2, f_fasta, best_final);
+        }else{
+          write_gff_feature(seqid, current_state, start, end, f_fasta, best_final); 
         }
+      }
+      if (current_state == "N"){
+        start = i - 1;
+      } else if (labels[i] == "N" ){
+        start = i + 2;
+      } else {
+        start = i;
+      }
+      previous_state = current_state;
+      current_state = labels[i];
     }
+  }
 
-    // Final segment
-    write_gff_feature(seqid, current_state, start, labels.size() - 1, f_fasta, best_final);
+  // Final segment
+  write_gff_feature(seqid, current_state, start, labels.size() - 1, f_fasta, best_final);
 }
 
 //------------------------------------------------------------
