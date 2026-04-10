@@ -53,7 +53,7 @@ string read_fasta(const string &file) {
     while (getline(in, line)) {
         if (!line.empty() && line[0] == '>') continue;
         for (char c : line) {
-            if (!isspace(c)) seq.push_back(toupper(c));
+            if (!isspace(c)) seq.push_back(c);
         }
     }
     return seq;
@@ -241,31 +241,19 @@ void run_viterbi(
         // on stop do not allow to continue in the same exon
         if ( i >= 2 ) {
           string codon;
-          codon.push_back(seq[i - 2]);
-          codon.push_back(seq[i - 1]);
-          codon.push_back(seq[i]);
+          codon.push_back(toupper(seq[i - 2]));
+          codon.push_back(toupper(seq[i - 1]));
+          codon.push_back(toupper(seq[i]));
 
           if (codon == "TAA" || codon == "TAG" || codon == "TGA") 
             is_stop = true;
         }
 
         for (int to = 0; to < NUM_STATES; to++) {
-            /*
-            if (is_exon(to) && is_stop) {
-                if (((i - 2) % 3) == to - 1) {
-                    dp[i][to].dp = -1e9;
-                    dp[i][to].bt = -1;
-                    dp[i][to].intron_len = 0;
-                    dp[i][to].exon_len   = 0;
-                    dp[i][to].inter_len  = 0;
-                    continue;
-                }
-            }
-*/
             double emit_log = emit[i][to];
 
             // Fix for TAG stop where AG is acceptor
-            if (emit_log <= -1e6 && b_prev == 'A' && b == 'G' && i + 1 < L) {
+            if (emit_log <= -1e6 && toupper(b_prev) == 'A' && toupper(b) == 'G' && i + 1 < L) {
                 emit_log = emit[i + 1][to];
             }
 
@@ -287,7 +275,7 @@ void run_viterbi(
                 // Exon → Intron only at GT AND only if exon length ≥ MIN_EXON
                 //--------------------------------------------------------
                 if (is_exon(from) && is_intron(to) &&
-                    b_prev == 'G' && b == 'T')
+                    toupper(b_prev) == 'G' && toupper(b) == 'T')
                 {
                     int len = dp[i - 1][from].exon_len - 2;
 
@@ -311,7 +299,7 @@ void run_viterbi(
                 // Intron → Exon only at AG AND only if intron length ≥ MIN_INTRON
                 //--------------------------------------------------------
                 if (is_intron(from) && is_exon(to) &&
-                    b_prev == 'A' && b == 'G')
+                    toupper(b_prev) == 'A' && toupper(b) == 'G')
                 {
                     int len = dp[i - 1][from].intron_len + 2;
 
@@ -379,7 +367,7 @@ void run_viterbi(
                              << " emission " << emit_log << "\n";
 
                         int frame = to - 1;
-                        if (((i - 2) % 3) == frame && emit_log > 0) { //only in the right frame and if psauron score is positive in this frame
+                        if (((i - 2) % 3) == frame && emit_log > 0.0) { //only in the right frame and if psauron score is positive in this frame
                             log_t = 1.0;
                         }
 
@@ -558,6 +546,7 @@ void write_gff_from_path(
     cout << "##gff-version 3\n";
 
     string current_state = labels[0];
+
     int start = 0;
     int end = 0;
 
