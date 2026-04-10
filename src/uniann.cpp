@@ -473,6 +473,25 @@ vector<int> viterbi_backtrace(
 }
 
 //------------------------------------------------------------
+// Backtrace: get scores for optimal path
+//------------------------------------------------------------
+vector<double> viterbi_backtrace_scores(
+    const vector<vector<DPCell>> &dp,
+    int L,
+    int best_state
+) {
+    vector<double> path_scores(L);
+    int cur = best_state;
+
+    for (int i = L - 1; i >= 0; i--) {
+        path_scores[i] = dp[i][cur].dp;
+        cur = dp[i][cur].bt;
+        if (cur < 0) break;
+    }
+    return path_scores;
+}
+
+//------------------------------------------------------------
 // Convert state numbers to labels
 //------------------------------------------------------------
 vector<string> states_to_labels(const vector<int> &path_states) {
@@ -545,6 +564,7 @@ void write_gff_feature(
 //------------------------------------------------------------
 void write_gff_from_path(
     const vector<string> &labels,
+    const vector<double> &scores,
     const string &seqid,
     const string &f_fasta,
     double best_final
@@ -552,6 +572,7 @@ void write_gff_from_path(
   cout << "##gff-version 3\n";
   string current_state = labels[0];
   string previous_state = labels[0];
+  double score = scores[0];
 
   int start = 0;
   int end = 0;
@@ -559,17 +580,19 @@ void write_gff_from_path(
   for (size_t i = 1; i < labels.size(); i++) {
     if (labels[i] != current_state) {
       end = i - 1;
-      if (current_state == "N")
+      if (current_state == "N")  { // transitioned to exon
         end = i - 2;
-      if (labels[i] == "N")
+      }
+      if (labels[i] == "N") { //transitioned to non-coding
         end = i + 1;
+      }
       if(end > start) {
         if(is_label_exon(current_state) && is_label_intron(previous_state)) {
-          write_gff_feature(seqid, current_state, start+2, end, f_fasta, best_final);
+          write_gff_feature(seqid, current_state, start+2, end, f_fasta, scores[i]);
         }else if(is_label_intron(current_state) && is_label_exon(previous_state)) {
-          write_gff_feature(seqid, current_state, start, end+2, f_fasta, best_final);
+          write_gff_feature(seqid, current_state, start, end+2, f_fasta, scores[i]);
         }else{
-          write_gff_feature(seqid, current_state, start, end, f_fasta, best_final); 
+          write_gff_feature(seqid, current_state, start, end, f_fasta, scores[i]); 
         }
       }
       if (current_state == "N"){
@@ -650,13 +673,14 @@ int main(int argc, char** argv) {
     // Backtrace
     //--------------------------------------------------------
     auto path_states = viterbi_backtrace(dp, L, best_state);
+    auto path_scores = viterbi_backtrace_scores(dp, L, best_state);
     auto path_labels = states_to_labels(path_states);
 
     //--------------------------------------------------------
     // Write GFF3 output
     //--------------------------------------------------------
     string seqid = get_fasta_header(f_fasta);
-    write_gff_from_path(path_labels, seqid, f_fasta, best_final);
+    write_gff_from_path(path_labels, path_scores, seqid, f_fasta, best_final);
 
     return 0;
 }
