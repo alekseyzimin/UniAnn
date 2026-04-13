@@ -361,13 +361,15 @@ for my $g(keys %genome_seqs){
       $p2=$pp2 if($p2==-1e6);
     }
 
-    my $max_score=$p0;
-    $max_score=$p1 if($p1>$max_score);
-    $max_score=$p2 if($p2>$max_score);
-    my $scoreN=0.1-$max_score;
-    my $scoreI0=0.1-$max_score;
-    my $scoreI1=0.1-$max_score;
-    my $scoreI2=0.1-$max_score;
+    my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
+    $p0-=$scores_sorted[1]/4 if($p0>-1e6);
+    $p1-=$scores_sorted[1]/4 if($p1>-1e6);
+    $p2-=$scores_sorted[1]/4 if($p2>-1e6);
+    my $scoreN=0.1-$scores_sorted[2];
+    my $scoreI0=0.1-$scores_sorted[2];
+    my $scoreI1=0.1-$scores_sorted[2];
+    my $scoreI2=0.1-$scores_sorted[2];
+
 
     if($p0==-1e6){#stop in frame 0,1 or 2
       $scoreN=10;
