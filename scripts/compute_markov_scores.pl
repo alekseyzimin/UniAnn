@@ -236,21 +236,8 @@ if( -e $ARGV[2]){
   }
 }
 
-#load psauron scores
-open(FILE,$ARGV[3]);
-$line=<FILE>;
-$line=<FILE>;
-$line=<FILE>;
-$line=<FILE>;
-while($line=<FILE>){
-  chomp($line);
-  my @f=split(/,/,$line);
-  $scores{$f[0]}=join(",",@f[9..14]);
-}
-
 open(FILEGT,">out.gt.txt");
 open(FILEAG,">out.ag.txt");
-open(FILEPS,">out.ps.txt");
 for my $g(keys %genome_seqs){
   #only doing forward for now!!!
   print "DEBUG scaffold $g $donor_length $acceptor_length\n";
@@ -262,32 +249,6 @@ for my $g(keys %genome_seqs){
   my %don_fwd_hmm2_score=();
   $seq_rev=~tr/ACGTNacgtn/TGCANtgcan/;
   $seq_rev=reverse($seq_rev);
-  @psauron_scores=split(/,/,$scores{$g});
-  @psauron_frame0=split(/;/,$psauron_scores[0]);
-  @psauron_frame1=split(/;/,$psauron_scores[1]);
-  @psauron_frame2=split(/;/,$psauron_scores[2]);
-  my $mult=30;
-  my $off=0.2;
-  for(my $i=0;$i<$#psauron_frame0;$i++){
-    $psauron_frame0[$i]=log($psauron_frame0[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame0[$i]=($psauron_frame0[$i]-$off)/(1-$off);
-  }
-  for(my $i=0;$i<$#psauron_frame1;$i++){
-    $psauron_frame1[$i]=log($psauron_frame1[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame1[$i]=($psauron_frame1[$i]-$off)/(1-$off);
-  }
-  for(my $i=0;$i<$#psauron_frame2;$i++){
-    $psauron_frame2[$i]=log($psauron_frame2[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame2[$i]=($psauron_frame2[$i]-$off)/(1-$off);
-  }
-  my $j=0;
-  #insert large negative score for an in frame stop 
-  for(my $i=0;$i<length($genome_seqs{$g})-3;$i+=3){
-    splice @psauron_frame0,$j,0,(-1e6) if(is_stop(substr($genome_seqs{$g},$i,3)));
-    splice @psauron_frame1,$j,0,(-1e6) if(is_stop(substr($genome_seqs{$g},$i+1,3)));
-    splice @psauron_frame2,$j,0,(-1e6) if(is_stop(substr($genome_seqs{$g},$i+2,3)));
-    $j++;
-  }
       
   #find donors fwd
   while ($seq_fwd =~ /GT/g) {
@@ -344,50 +305,6 @@ for my $g(keys %genome_seqs){
     }
   }
   
-  my ($p0,$p1,$p2)=(0,0,0);
-  my ($pp0,$pp1,$pp2)=(0,0,0);
-  for(my $i=0;$i<length($seq_fwd);$i++){
-    ($p0,$p1,$p2)=(0,0,0);
-    $p0=$psauron_frame0[int($i/3)] if defined($psauron_frame0[int($i/3)]);
-    $p1=$psauron_frame1[int(($i-1)/3)] if ($i>0);
-    $p2=$psauron_frame2[int(($i-2)/3)] if ($i>1);
-    if($i%3==0 || $i%3==1){
-      $p0=$pp0 if($p0==-1e6);
-    }
-    if($i%3==1 || $i%3==2){
-      $p1=$pp1 if($p1==-1e6);
-    }
-    if($i%3==2 || $i%3==0){
-      $p2=$pp2 if($p2==-1e6);
-    }
-
-    my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
-    $p0-=$scores_sorted[1]/4 if($p0>-1e6);
-    $p1-=$scores_sorted[1]/4 if($p1>-1e6);
-    $p2-=$scores_sorted[1]/4 if($p2>-1e6);
-    my $scoreN=0.1-$scores_sorted[2];
-    my $scoreI0=0.1-$scores_sorted[2];
-    my $scoreI1=0.1-$scores_sorted[2];
-    my $scoreI2=0.1-$scores_sorted[2];
-
-
-    if($p0==-1e6){#stop in frame 0,1 or 2
-      $scoreN=10;
-      $scoreI0=-1;
-    }
-    if($p1==-1e6){#stop in frame 0,1 or 2
-      $scoreN=10;
-      $scoreI1=-1;
-    }
-    if($p2==-1e6){#stop in frame 0,1 or 2
-      $scoreN=10;
-      $scoreI2=-1;
-    }
-    printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI0,$scoreI1,$scoreI2,substr($seq_fwd,$i,1);
-    $pp0=$p0 if($p0 > -1e6);
-    $pp1=$p1 if($p1 > -1e6);
-    $pp2=$p2 if($p2 > -1e6);
-  }
   my $splice_t=-1.5;
   for(my $i=0;$i<length($seq_fwd);$i++){
     if(defined($don_fwd_hmm2_score{$i})){
@@ -420,72 +337,3 @@ sub is_start{
     return 0;
   }
 }
-
-sub check_start_stop{
-  my $candidate_exon=@_[0];
-  my $start_coord=-1;
-  my $stop_coord=-1;
-  for(my $k=0;$k<length($seq);$k+=3){
-    $start_coord=$k if(is_start(substr($candidate_exon,$k,3)) && $start_coord==-1);
-    if(is_stop(substr($candidate_exon,$k,3))){
-      $stop_coord=$k;
-      last;
-    }
-  }
-  return ($start_coord,$stop_coord);
-}
-
-sub find_intervals {
-    my ($vals, $T, $L, $M) = @_;
-    my @intervals;
-    my ($start, $end);
-
-    # -------------------------
-    # Step 1: find raw intervals above threshold T
-    # -------------------------
-    for my $i (0 .. $#$vals) {
-        if ($vals->[$i] > $T) {
-            $start = $i if !defined $start;
-            $end   = $i;
-        } else {
-            if (defined $start) {
-                push @intervals, [$start, $end];
-                undef $start;
-                undef $end;
-            }
-        }
-    }
-    push @intervals, [$start, $end] if defined $start;
-
-    # -------------------------
-    # Step 2: merge intervals with gaps < L
-    # -------------------------
-    my @merged;
-    for my $iv (@intervals) {
-        if (!@merged) {
-            push @merged, $iv;
-            next;
-        }
-        my ($ps, $pe) = @{$merged[-1]};
-        my ($cs, $ce) = @$iv;
-
-        if ($cs - $pe - 1 < $L) {
-            # merge
-            $merged[-1]->[1] = $ce;
-        } else {
-            push @merged, $iv;
-        }
-    }
-
-    # -------------------------
-    # Step 3: filter out intervals shorter than M
-    # -------------------------
-    my @filtered = grep {
-        my ($s, $e) = @$_;
-        ($e - $s + 1) >= $M
-    } @merged;
-
-    return @filtered;
-}
-
-
