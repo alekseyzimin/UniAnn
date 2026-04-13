@@ -1,4 +1,10 @@
 #!/usr/bin/env perl
+#usage on empty
+unless(defined($ARGV[0]) && defined($ARGV[1])){
+  die "Usage:\npreprocess_psauron_scores.pl genome.fa psauron_score.csv\nMake sure that psauron was run with -a option!\n";
+}
+  
+
 #we load the genome sequences
 open(FILE,$ARGV[0]);
 while(my $line=<FILE>){

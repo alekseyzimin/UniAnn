@@ -1,4 +1,9 @@
 #!/usr/bin/env perl
+#usage on empty
+unless(defined($ARGV[0]) && defined($ARGV[1]) && defined($ARGV[2])){
+  die "Usage:\ncompute_markov_scores.pl genome.fa positive_model.pwm negative_model.pwm\n";
+}
+
 my @narray=("A","C","G","T");
 #initialize code hashes
 $n=0;
