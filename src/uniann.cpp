@@ -251,6 +251,7 @@ void run_viterbi(
     const vector<array<double, NUM_STATES>> &emit,
     const vector<double> &gt_score,
     const vector<double> &ag_score,
+    const vector<double> &atg_score,
     const vector<char> &seq,
     const vector<vector<double>> &trans
 ) {
@@ -683,7 +684,7 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------
     // Run full Viterbi
     //--------------------------------------------------------
-    run_viterbi(dp, emit, gt_score, ag_score, seq, trans);
+    run_viterbi(dp, emit, gt_score, ag_score, atg_score, seq, trans);
 
     //--------------------------------------------------------
     // Termination
