@@ -107,6 +107,9 @@ MYPATH="`( cd \"$MYPATH\" && pwd )`"
 which psauron
 psauron -i $FASTA -a 1>psauron.out 2>&1 && \
 $MYPATH/preprocess_psauron_scores.pl $FASTA psauron_score.csv &&\
+#this produces out.atg.txt
+$MYPATH/score_start_sites.pl $FASTA $START_PWM && \
+#this produces out.gt.txt and out.ag.txt 
 $MYPATH/compute_markov_scores.pl $FASTA $POS_PWM $NEG_PWM && \
-$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt 2>out.err | tee >( grep -v region|gffread -F >$FASTA.gff) > out.txt
+$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt 2>out.err | tee >( grep -v region|gffread -F >$FASTA.gff) > out.txt
 echo "Output gff file is $FASTA.gff"
