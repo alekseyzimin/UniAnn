@@ -91,9 +91,9 @@ for my $g(keys %genome_seqs){
     }
 
     my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
-    $p0-=$scores_sorted[1]/4 if($p0>-1e6);
-    $p1-=$scores_sorted[1]/4 if($p1>-1e6);
-    $p2-=$scores_sorted[1]/4 if($p2>-1e6);
+    #$p0-=$scores_sorted[1]/4 if($p0>-1e6);
+    #$p1-=$scores_sorted[1]/4 if($p1>-1e6);
+    #$p2-=$scores_sorted[1]/4 if($p2>-1e6);
     my $scoreN=0.1-$scores_sorted[2];
     my $scoreI0=0.1-$scores_sorted[2];
     my $scoreI1=0.1-$scores_sorted[2];

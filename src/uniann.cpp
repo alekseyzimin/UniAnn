@@ -391,11 +391,12 @@ void run_viterbi(
                              << " emission " << emit_log << "\n";
 
                         int frame = to - 1;
-                        if (((i - 2) % 3) == frame && emit_log > 0.0) { //only in the right frame and if psauron score is positive in this frame
+                        if (((i - 2) % 3) == frame) { //only in the right frame and if psauron score is positive in this frame
                             if (i < 25) {
                               log_t = 1.0;
                             } else {
                               log_t = atg_score[i - 2];
+                              //log_t = 1.0;
                             }
                         }
 
