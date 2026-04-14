@@ -391,7 +391,11 @@ void run_viterbi(
 
                         int frame = to - 1;
                         if (((i - 2) % 3) == frame && emit_log > 0.0) { //only in the right frame and if psauron score is positive in this frame
-                            log_t = 1.0;
+                            if (i < 25) {
+                              log_t = 1.0;
+                            } else {
+                              log_t = atg_score[i - 2];
+                            }
                         }
 
                         cerr << "DEBUG probability " << log_t << "\n";
