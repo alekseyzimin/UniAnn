@@ -51,71 +51,31 @@ foreach $start_seq (@seqs){
 }
 
 my $score_floor_value=1e-10;
+print "zoeHMM\n";
+print "ATG 0HMM\n";
 for(my $i=0;$i<$start_length;$i++){
   for(my $j=0;$j<4;$j++){
-    $start_pwm[$i][$j]=log($start_pwm[$i][$j]/$w*4+$score_floor_value);
+    printf("%.3f ", log($start_pwm[$i][$j]/$w*4+$score_floor_value));
   }
+  print "\n";
 }
+print "NNN TRM\n";
 
+print "ATG 1HMM\n";
 for(my $i=0;$i<$start_length-1;$i++){
   for(my $j=0;$j<16;$j++){
-    $start2_pwm[$i][$j]=log($start2_pwm[$i][$j]/$w*16+$score_floor_value);
+    printf("%.3f ", log($start2_pwm[$i][$j]/$w*16+$score_floor_value));
   }
+  print "\n";
 } 
+print "NNN TRM\n";
 
+print "ATG 2HMM\n";
 for(my $i=0;$i<$start_length-2;$i++){
   for(my $j=0;$j<64;$j++){
-    $start3_pwm[$i][$j]=log($start3_pwm[$i][$j]/$w*64+$score_floor_value);
+    printf("%.3f ", log($start3_pwm[$i][$j]/$w*64+$score_floor_value));
   }
+  print "\n";
 } 
-
-#we load the genome sequences
-$seq="";
-open(FILE,$score_seq);
-while(my $line=<FILE>){
-  chomp($line);
-  if($line=~ /^>/){
-    if(not($scf eq "")){
-      $genome_seqs{$scf}=$seq;
-      $seq="";
-    }
-    my @f=split(/\s+/,$line);
-    $scf=substr($f[0],1);
-  }else{
-    $seq.=$line;
-  } 
-}   
-$genome_seqs{$scf}=$seq if(not($scf eq ""));
-
-
-open(FILEATG,">out.atg.txt");
-for my $g(keys %genome_seqs){
-  #only doing forward for now!!!
-  print "DEBUG scaffold $g $start_length $acceptor_length\n";
-  my $seq_fwd=uc($genome_seqs{$g});
-  my $seq_rev=$seq_fwd;
-  my @start_fwd_pos=();
-  #find starts fwd
-  while ($seq_fwd =~ /ATG/g) {
-    push @start_fwd_pos, pos($seq_fwd) - 3 if(pos($seq_fwd)>23);  # subtract length of "ATG" (2) to get start index
-  }
-  for $pos(@start_fwd_pos){
-    my $start_seq=substr($seq_fwd,$pos-19,$start_length);
-    my $start_hmm2_score=0;
-    my $start_hmm2_nscore=0;
-    
-    for(my $i=0;$i<($start_length-2);$i++){
-      $start_hmm2_score+=$start3_pwm[$i][$code3{substr($start_seq,$i,3)}] if(defined($code3{substr($start_seq,$i,3)}));
-    }
-    $start_hmm2_score+=$start2_pwm[0][$code2{substr($start_seq,0,2)}] if(defined($code2{substr($start_seq,0,2)}));
-    $start_hmm2_score=-1000 if($start_hmm2_score<10);
-    print FILEATG "$pos\t",$start_hmm2_score,"\n";
-    $startfwd_hmm2_score{$pos}=$start_hmm2_score;
-  }
-}
-
-
-
-
-
+print "NNN TRM\n";
 

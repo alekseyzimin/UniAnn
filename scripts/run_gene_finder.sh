@@ -29,9 +29,11 @@ function error_exit {
 function usage {
 echo "Usage:"
 echo "run_gene_finder.sh [arguments]"
-echo "-g file sith a single fasta sequence"
+echo "-f file sith a single fasta sequence"
+echo "-s start PWM models"
 echo "-p positive PWM/WAM splice site models"
 echo "-n negative PWM/WAM splice site models"
+
 }
 
 #parsing arguments
@@ -45,8 +47,12 @@ do
     key="$1"
 
     case $key in
-        -g|--genome)
+        -f|--fasta)
             FASTA="$2"
+            shift
+            ;;
+        -s|--start)
+            START_PWM="$2"
             shift
             ;;
         -p|--pos)
@@ -86,6 +92,12 @@ fi
 
 if [[ ! -s $NEG_PWM ]];then
 echo "Input file of weights for negative model of splice sites $NEG_PWM not found or not specified!"
+usage
+exit 1
+fi
+
+if [[ ! -s $START_PWM ]];then
+echo "Input file of weights for model of start sites $START_PWM not found or not specified!"
 usage
 exit 1
 fi

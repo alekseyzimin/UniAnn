@@ -97,7 +97,7 @@ vector<array<double, NUM_STATES>> load_emissions(const string &file, int L) {
 }
 
 //------------------------------------------------------------
-// Load sparse GT/AG scores
+// Load sparse ATG/GT/AG scores
 //------------------------------------------------------------
 vector<double> load_sparse_scores(const string &file, int L) {
     vector<double> scores(L, NEG_INF);
@@ -142,10 +142,11 @@ string get_fasta_header(const string &file) {
 //------------------------------------------------------------
 // Safety check: verify GT/AG coordinates match the sequence
 //------------------------------------------------------------
-void safety_check_gt_ag(
+void safety_check_gt_ag_atg(
     const vector<char> &seq,
     const vector<double> &gt_score,
-    const vector<double> &ag_score
+    const vector<double> &ag_score,
+    const vector<double> &atg_score
 ) {
     int L = seq.size();
     for (int pos = 0; pos < L - 1; pos++) {
@@ -171,6 +172,19 @@ void safety_check_gt_ag(
                      << pos << " but sequence has " << dinuc << "\n";
             }
         }
+
+        // Check ATG
+        if (atg_score[pos] > -1e8) {
+            string trinuc;
+            trinuc.push_back(toupper(seq[pos]));
+            trinuc.push_back(toupper(seq[pos + 1]));
+            trinuc.push_back(toupper(seq[pos + 2]));
+            if (trinuc != "ATG") {
+                cerr << "WARNING: ATG score at position "
+                     << pos << " but sequence has " << trinuc << "\n";
+            }
+        }
+
     }
 }
 
@@ -627,6 +641,7 @@ int main(int argc, char** argv) {
     string f_emit  = argv[2];
     string f_gt    = argv[3];
     string f_ag    = argv[4];
+    string f_atg   = argv[5];
 
     //--------------------------------------------------------
     // Load FASTA
@@ -641,14 +656,15 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------
     // Load emissions and splice scores
     //--------------------------------------------------------
-    auto emit     = load_emissions(f_emit, L);
-    auto gt_score = load_sparse_scores(f_gt, L);
-    auto ag_score = load_sparse_scores(f_ag, L);
+    auto emit     =  load_emissions(f_emit, L);
+    auto gt_score =  load_sparse_scores(f_gt, L);
+    auto ag_score =  load_sparse_scores(f_ag, L);
+    auto atg_score = load_sparse_scores(f_atg, L);
 
     //--------------------------------------------------------
     // Safety check: GT/AG coordinates match sequence
     //--------------------------------------------------------
-    safety_check_gt_ag(seq, gt_score, ag_score);
+    safety_check_gt_ag_atg(seq, gt_score, ag_score, atg_score);
 
     //--------------------------------------------------------
     // Initialize transitions
