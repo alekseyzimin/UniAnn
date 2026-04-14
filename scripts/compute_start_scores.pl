@@ -70,6 +70,7 @@ for(my $i=0;$i<$start_length-2;$i++){
 } 
 
 #we load the genome sequences
+$seq="";
 open(FILE,$score_seq);
 while(my $line=<FILE>){
   chomp($line);
@@ -87,7 +88,7 @@ while(my $line=<FILE>){
 $genome_seqs{$scf}=$seq if(not($scf eq ""));
 
 
-open(FILEST,">out.atg.txt");
+open(FILEATG,">out.atg.txt");
 for my $g(keys %genome_seqs){
   #only doing forward for now!!!
   print "DEBUG scaffold $g $start_length $acceptor_length\n";
@@ -107,7 +108,8 @@ for my $g(keys %genome_seqs){
       $start_hmm2_score+=$start3_pwm[$i][$code3{substr($start_seq,$i,3)}] if(defined($code3{substr($start_seq,$i,3)}));
     }
     $start_hmm2_score+=$start2_pwm[0][$code2{substr($start_seq,0,2)}] if(defined($code2{substr($start_seq,0,2)}));
-    print "$pos $start_seq $start_score $start_hmm_score $start_hmm2_score\n";
+    $start_hmm2_score=-1000 if($start_hmm2_score<10);
+    print FILEATG "$pos\t",$start_hmm2_score,"\n";
     $startfwd_hmm2_score{$pos}=$start_hmm2_score;
   }
 }
