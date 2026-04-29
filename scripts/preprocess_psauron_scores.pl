@@ -1,4 +1,6 @@
 #!/usr/bin/env perl
+my $stop_value=-1e6;
+
 #usage on empty
 unless(defined($ARGV[0]) && defined($ARGV[1])){
   die "Usage:\npreprocess_psauron_scores.pl genome.fa psauron_score.csv\nMake sure that psauron was run with -a option!\n";
@@ -50,8 +52,9 @@ for my $g(keys %genome_seqs){
   @psauron_frame0=split(/;/,$psauron_scores[0]);
   @psauron_frame1=split(/;/,$psauron_scores[1]);
   @psauron_frame2=split(/;/,$psauron_scores[2]);
+  
   my $mult=30;
-  my $off=0.2;
+  #my $off=0.2;
   for(my $i=0;$i<$#psauron_frame0;$i++){
     $psauron_frame0[$i]=log($psauron_frame0[$i]*$mult+1e-6)/log($mult);
     #$psauron_frame0[$i]=($psauron_frame0[$i]-$off)/(1-$off);
@@ -67,19 +70,25 @@ for my $g(keys %genome_seqs){
   my $j=0;
   #insert large negative score for an in frame stop 
   for(my $i=0;$i<length($genome_seqs{$g})-3;$i+=3){
-    splice @psauron_frame0,$j,0,(-1e6) if(is_stop(substr($genome_seqs{$g},$i,3)));
-    splice @psauron_frame1,$j,0,(-1e6) if(is_stop(substr($genome_seqs{$g},$i+1,3)));
-    splice @psauron_frame2,$j,0,(-1e6) if(is_stop(substr($genome_seqs{$g},$i+2,3)));
+    splice @psauron_frame0,$j,0,$stop_value if(is_stop(substr($genome_seqs{$g},$i,3)));
+    splice @psauron_frame1,$j,0,$stop_value if(is_stop(substr($genome_seqs{$g},$i+1,3)));
+    splice @psauron_frame2,$j,0,$stop_value if(is_stop(substr($genome_seqs{$g},$i+2,3)));
     $j++;
   }
+
+  #replace scores by averages between the stops
+  @psauron_frame0_ave=average_between_stops(\@psauron_frame0);
+  @psauron_frame1_ave=average_between_stops(\@psauron_frame1);
+  @psauron_frame2_ave=average_between_stops(\@psauron_frame2);
       
   my ($p0,$p1,$p2)=(0,0,0);
   my ($pp0,$pp1,$pp2)=(0,0,0);
   for(my $i=0;$i<length($seq_fwd);$i++){
     ($p0,$p1,$p2)=(0,0,0);
-    $p0=$psauron_frame0[int($i/3)] if defined($psauron_frame0[int($i/3)]);
-    $p1=$psauron_frame1[int(($i-1)/3)] if ($i>0);
-    $p2=$psauron_frame2[int(($i-2)/3)] if ($i>1);
+    $p0=$psauron_frame0_ave[int($i/3)] if defined($psauron_frame0[int($i/3)]);
+    $p1=$psauron_frame1_ave[int(($i-1)/3)] if ($i>0);
+    $p2=$psauron_frame2_ave[int(($i-2)/3)] if ($i>1);
+    
     if($i%3==0 || $i%3==1){
       $p0=$pp0 if($p0==-1e6);
     }
@@ -89,11 +98,15 @@ for my $g(keys %genome_seqs){
     if($i%3==2 || $i%3==0){
       $p2=$pp2 if($p2==-1e6);
     }
-
+    
+    my $min_diff=0.5;
     my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
-    #$p0-=$scores_sorted[1]/4 if($p0>-1e6);
-    #$p1-=$scores_sorted[1]/4 if($p1>-1e6);
-    #$p2-=$scores_sorted[1]/4 if($p2>-1e6);
+    if($scores_sorted[2]-$scores_sorted[1]>$min_diff && $scores_sorted[2]>0){
+      $p0+=1-$scores_sorted[2] if($p0>-1e6);
+      $p1+=1-$scores_sorted[2] if($p1>-1e6);
+      $p2+=1-$scores_sorted[2] if($p2>-1e6);
+      $scores_sorted[2]=1;
+    }
     my $scoreN=0.1-$scores_sorted[2];
     my $scoreI0=0.1-$scores_sorted[2];
     my $scoreI1=0.1-$scores_sorted[2];
@@ -133,5 +146,46 @@ sub is_start{
   }else{
     return 0;
   }
+}
+
+sub average_between_stops {
+    my ($arr_ref, $marker) = @_;
+    $marker //= $stop_value;   # default marker
+
+    my @arr = @$arr_ref;
+    my $n = @arr;
+
+    my $start = undef;   # start index of a block
+    my $sum   = 0;
+    my $count = 0;
+
+    for (my $i = 0; $i <= $n; $i++) {
+
+        # Case 1: inside a block and we hit a marker or end of array
+        if (defined $start && ($i == $n || $arr[$i] == $marker)) {
+            my $avg = $count ? $sum / $count : $marker;
+
+            # replace values in the block
+            for my $j ($start .. $i-1) {
+                $arr[$j] = $avg;
+            }
+
+            # reset block
+            undef $start;
+            $sum = 0;
+            $count = 0;
+        }
+
+        # Case 2: start of a new block
+        if ($i < $n && $arr[$i] != $marker) {
+            if (!defined $start) {
+                $start = $i;
+            }
+            $sum += $arr[$i];
+            $count++;
+        }
+    }
+
+    return @arr;
 }
 
