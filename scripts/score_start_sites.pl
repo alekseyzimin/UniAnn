@@ -100,7 +100,6 @@ for my $g(keys %genome_seqs){
   for $pos(@start_fwd_pos){
     my $start_seq=substr($seq_fwd,$pos-($start_length-6),$start_length);
     my $start_hmm2_score=0;
-    my $start_hmm2_nscore=0;
     
     for(my $i=0;$i<($start_length-2);$i++){
       $start_hmm2_score+=$start_hmm2_freq[$i][$code3{substr($start_seq,$i,3)}] if(defined($code3{substr($start_seq,$i,3)}));

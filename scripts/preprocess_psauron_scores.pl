@@ -147,15 +147,15 @@ for my $g(keys %genome_seqs){
 
 
     if($p0==-1e6){#stop in frame 0,1 or 2
-      $scoreN=10;
+      $scoreN=20;
       $scoreI0=-1;
     }
     if($p1==-1e6){#stop in frame 0,1 or 2
-      $scoreN=10;
+      $scoreN=20;
       $scoreI1=-1;
     }
     if($p2==-1e6){#stop in frame 0,1 or 2
-      $scoreN=10;
+      $scoreN=20;
       $scoreI2=-1;
     }
     printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI0,$scoreI1,$scoreI2,substr($seq_fwd,$i,1);
