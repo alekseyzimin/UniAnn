@@ -34,6 +34,12 @@ while($line=<FILE>){
   chomp($line);
   my @f=split(/,/,$line);
   $scores{$f[0]}=join(",",@f[9..14]);
+  $psauron_scores_0f{$g}=$f[9];
+  $psauron_scores_1f{$g}=$f[10];
+  $psauron_scores_2f{$g}=$f[11];
+  $psauron_scores_0r{$g}=$f[12];
+  $psauron_scores_1r{$g}=$f[13];
+  $psauron_scores_2r{$g}=$f[14];
 }
 
 open(FILEPS,">out.ps.txt");
@@ -41,29 +47,21 @@ for my $g(keys %genome_seqs){
   #only doing forward for now!!!
   print "DEBUG scaffold $g $donor_length $acceptor_length\n";
   my $seq_fwd=uc($genome_seqs{$g});
-  my $seq_rev=$seq_fwd;
-  my @don_fwd_pos=();
-  my @acc_fwd_pos=();
-  my %acceptor_fwd_hmm2_score=();
-  my %don_fwd_hmm2_score=();
-  $seq_rev=~tr/ACGTNacgtn/TGCANtgcan/;
-  $seq_rev=reverse($seq_rev);
-  @psauron_scores=split(/,/,$scores{$g});
-  @psauron_frame0=split(/;/,$psauron_scores[0]);
-  @psauron_frame1=split(/;/,$psauron_scores[1]);
-  @psauron_frame2=split(/;/,$psauron_scores[2]);
+  @psauron_frame0=split(/;/,$psauron_scores_0f{$g});
+  @psauron_frame1=split(/;/,$psauron_scores_1f{$g});
+  @psauron_frame2=split(/;/,$psauron_scores_2f{$g});
   
   my $mult=30;
   #my $off=0.2;
-  for(my $i=0;$i<$#psauron_frame0;$i++){
+  for(my $i=0;$i<=$#psauron_frame0;$i++){
     $psauron_frame0[$i]=log($psauron_frame0[$i]*$mult+1e-6)/log($mult);
     #$psauron_frame0[$i]=($psauron_frame0[$i]-$off)/(1-$off);
   }
-  for(my $i=0;$i<$#psauron_frame1;$i++){
+  for(my $i=0;$i<=$#psauron_frame1;$i++){
     $psauron_frame1[$i]=log($psauron_frame1[$i]*$mult+1e-6)/log($mult);
     #$psauron_frame1[$i]=($psauron_frame1[$i]-$off)/(1-$off);
   }
-  for(my $i=0;$i<$#psauron_frame2;$i++){
+  for(my $i=0;$i<=$#psauron_frame2;$i++){
     $psauron_frame2[$i]=log($psauron_frame2[$i]*$mult+1e-6)/log($mult);
     #$psauron_frame2[$i]=($psauron_frame2[$i]-$off)/(1-$off);
   }
@@ -77,17 +75,17 @@ for my $g(keys %genome_seqs){
   }
 
   #replace scores by averages between the stops
-  @psauron_frame0_ave=average_between_stops(\@psauron_frame0);
-  @psauron_frame1_ave=average_between_stops(\@psauron_frame1);
-  @psauron_frame2_ave=average_between_stops(\@psauron_frame2);
+  #@psauron_frame0_ave=average_between_stops(\@psauron_frame0);
+  #@psauron_frame1_ave=average_between_stops(\@psauron_frame1);
+  #@psauron_frame2_ave=average_between_stops(\@psauron_frame2);
       
   my ($p0,$p1,$p2)=(0,0,0);
   my ($pp0,$pp1,$pp2)=(0,0,0);
   for(my $i=0;$i<length($seq_fwd);$i++){
     ($p0,$p1,$p2)=(0,0,0);
-    $p0=$psauron_frame0_ave[int($i/3)] if defined($psauron_frame0[int($i/3)]);
-    $p1=$psauron_frame1_ave[int(($i-1)/3)] if ($i>0);
-    $p2=$psauron_frame2_ave[int(($i-2)/3)] if ($i>1);
+    $p0=$psauron_frame0[int($i/3)] if defined($psauron_frame0[int($i/3)]);
+    $p1=$psauron_frame1[int(($i-1)/3)] if ($i>0);
+    $p2=$psauron_frame2[int(($i-2)/3)] if ($i>1);
     
     if($i%3==0 || $i%3==1){
       $p0=$pp0 if($p0==-1e6);
@@ -99,14 +97,23 @@ for my $g(keys %genome_seqs){
       $p2=$pp2 if($p2==-1e6);
     }
     
-    my $min_diff=0.5;
-    my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
-    if($scores_sorted[2]-$scores_sorted[1]>$min_diff && $scores_sorted[2]>0){
-      $p0+=1-$scores_sorted[2] if($p0>-1e6);
-      $p1+=1-$scores_sorted[2] if($p1>-1e6);
-      $p2+=1-$scores_sorted[2] if($p2>-1e6);
-      $scores_sorted[2]=1;
-    }
+    #my $min_diff=0.5;
+    #my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
+    #if($scores_sorted[2]-$scores_sorted[1]>$min_diff && $scores_sorted[2]>0){
+    #  $p0+=1-$scores_sorted[2] if($p0>-1e6 && $scores_sorted[2]>0);
+    #  $p1+=1-$scores_sorted[2] if($p1>-1e6 && $scores_sorted[2]>0);
+    #  $p2+=1-$scores_sorted[2] if($p2>-1e6 && $scores_sorted[2]>0);
+    #  $scores_sorted[2]=1;
+    #}else{
+    #  $p0-=$scores_sorted[1] if($p0>-1e6 && $scores_sorted[1]>0);
+    #  $p1-=$scores_sorted[1] if($p1>-1e6 && $scores_sorted[1]>0);
+    #  $p2-=$scores_sorted[1] if($p2>-1e6 && $scores_sorted[1]>0);
+    #}
+
+    my $max_score=$p0;
+    $max_score=$p1 if($p1 > $max_score);
+    $max_score=$p2 if($p2 > $max_score);
+
     my $scoreN=0.1-$scores_sorted[2];
     my $scoreI0=0.1-$scores_sorted[2];
     my $scoreI1=0.1-$scores_sorted[2];
