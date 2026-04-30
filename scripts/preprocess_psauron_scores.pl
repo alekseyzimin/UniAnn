@@ -33,7 +33,7 @@ $line=<FILE>;
 while($line=<FILE>){
   chomp($line);
   my @f=split(/,/,$line);
-  $scores{$f[0]}=join(",",@f[9..14]);
+  my $g=$f[0];
   $psauron_scores_0f{$g}=$f[9];
   $psauron_scores_1f{$g}=$f[10];
   $psauron_scores_2f{$g}=$f[11];
