@@ -53,18 +53,10 @@ for my $g(keys %genome_seqs){
   
   my $mult=30;
   #my $off=0.2;
-  for(my $i=0;$i<=$#psauron_frame0;$i++){
-    $psauron_frame0[$i]=log($psauron_frame0[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame0[$i]=($psauron_frame0[$i]-$off)/(1-$off);
-  }
-  for(my $i=0;$i<=$#psauron_frame1;$i++){
-    $psauron_frame1[$i]=log($psauron_frame1[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame1[$i]=($psauron_frame1[$i]-$off)/(1-$off);
-  }
-  for(my $i=0;$i<=$#psauron_frame2;$i++){
-    $psauron_frame2[$i]=log($psauron_frame2[$i]*$mult+1e-6)/log($mult);
-    #$psauron_frame2[$i]=($psauron_frame2[$i]-$off)/(1-$off);
-  }
+  $_ = log($_*$mult+1e-6)/log($mult) for @psauron_frame0;
+  $_ = log($_*$mult+1e-6)/log($mult) for @psauron_frame1;
+  $_ = log($_*$mult+1e-6)/log($mult) for @psauron_frame2;
+
   my $j=0;
   #insert large negative score for an in frame stop 
   for(my $i=0;$i<length($genome_seqs{$g})-3;$i+=3){
