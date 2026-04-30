@@ -61,9 +61,9 @@ for my $g(keys %genome_seqs){
   my $j=0;
   #insert large negative score for an in frame stop 
   for(my $i=0;$i<length($seq_fwd)-3;$i+=3){
-    splice @psauron_frame0,$j,0,$stop_value if(is_stop(substr($genome_seqs{$g},$i,3)));
-    splice @psauron_frame1,$j,0,$stop_value if(is_stop(substr($genome_seqs{$g},$i+1,3)));
-    splice @psauron_frame2,$j,0,$stop_value if(is_stop(substr($genome_seqs{$g},$i+2,3)));
+    splice @psauron_frame0,$j,0,$stop_value if(is_stop(substr($seq_fwd,$i,3)));
+    splice @psauron_frame1,$j,0,$stop_value if(is_stop(substr($seq_fwd,$i+1,3)));
+    splice @psauron_frame2,$j,0,$stop_value if(is_stop(substr($seq_fwd,$i+2,3)));
     $j++;
   }
 
