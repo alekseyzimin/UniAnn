@@ -41,16 +41,19 @@ while($line=<FILE>){
   $psauron_scores_1r{$g}=$f[13];
   $psauron_scores_2r{$g}=$f[14];
 }
+$now=localtime(); 
+print "DEBUG $now: psauron scores loaded\n";
 
 open(FILEPS,">out.ps.txt");
 for my $g(keys %genome_seqs){
   #only doing forward for now!!!
-  print "DEBUG scaffold $g $donor_length $acceptor_length\n";
+  $now=localtime();
+  print "DEBUG $now: starting scaffold $g\n";
   my $seq_fwd=uc($genome_seqs{$g});
   @psauron_frame0=split(/;/,$psauron_scores_0f{$g});
   @psauron_frame1=split(/;/,$psauron_scores_1f{$g});
   @psauron_frame2=split(/;/,$psauron_scores_2f{$g});
-  
+   
   my $mult=30;
   my $lmult=log($mult);
   #my $off=0.2;
@@ -58,19 +61,41 @@ for my $g(keys %genome_seqs){
   $_ = log($_*$mult+1e-6)/$lmult for @psauron_frame1;
   $_ = log($_*$mult+1e-6)/$lmult for @psauron_frame2;
 
+  $now=localtime();
+  print "DEBUG $now: log transform done for $g\n";
   my $j=0;
-  #insert large negative score for an in frame stop 
+  
+  #find all stops and insert large negative score for an in frame stop 
+  my %stops;
+  while($seq_fwd =~ /TAA|TAG|TGA/g){
+    $stops{$-[0]}=1;
+  }
+  $now=localtime();
+  print "DEBUG $now: stops located for $g\n";
+
+  my %stops_f0;
+  my %stops_f1;
+  my %stops_f2;
+  my $j=0;
+
   for(my $i=0;$i<length($seq_fwd)-3;$i+=3){
-    if(is_stop(substr($seq_fwd,$i,3))){
-      splice @psauron_frame0,$j,0,$stop_value;
-    }elsif(is_stop(substr($seq_fwd,$i+1,3))){
-      splice @psauron_frame1,$j,0,$stop_value;
-    }elsif(is_stop(substr($seq_fwd,$i+2,3))){
-      splice @psauron_frame2,$j,0,$stop_value;
+    if($stops{$i}){
+      $stops_f0{$j-(keys %stops_f0)}=$stop_value;
+    }elsif($stops{$i+1}){
+      $stops_f1{$j-(keys %stops_f1)}=$stop_value;
+    }elsif($stops{$i+2}){
+      $stops_f2{$j-(keys %stops_f2)}=$stop_value;
     }
     $j++;
   }
-
+  $now=localtime();
+  print "DEBUG $now: stops in frames $g\n";
+  
+  @psauron_frame0_wstops=insert_after_positions(\@psauron_frame0,\%stops_f0);
+  @psauron_frame1_wstops=insert_after_positions(\@psauron_frame1,\%stops_f1);
+  @psauron_frame2_wstops=insert_after_positions(\@psauron_frame2,\%stops_f2);
+  $now=localtime();
+  print "DEBUG $now: stops inserted for $g\n";
   #replace scores by averages between the stops
   #@psauron_frame0_ave=average_between_stops(\@psauron_frame0);
   #@psauron_frame1_ave=average_between_stops(\@psauron_frame1);
@@ -80,9 +105,9 @@ for my $g(keys %genome_seqs){
   my ($pp0,$pp1,$pp2)=(0,0,0);
   for(my $i=0;$i<length($seq_fwd);$i++){
     ($p0,$p1,$p2)=(0,0,0);
-    $p0=$psauron_frame0[int($i/3)] if defined($psauron_frame0[int($i/3)]);
-    $p1=$psauron_frame1[int(($i-1)/3)] if ($i>0);
-    $p2=$psauron_frame2[int(($i-2)/3)] if ($i>1);
+    $p0=$psauron_frame0_wstops[int($i/3)] if defined($psauron_frame0_wstops[int($i/3)]);
+    $p1=$psauron_frame1_wstops[int(($i-1)/3)] if ($i>0);
+    $p2=$psauron_frame2_wstops[int(($i-2)/3)] if ($i>1);
     
     if($i%3==0 || $i%3==1){
       $p0=$pp0 if($p0==-1e6);
@@ -134,6 +159,8 @@ for my $g(keys %genome_seqs){
     $pp1=$p1 if($p1 > -1e6);
     $pp2=$p2 if($p2 > -1e6);
   }
+  $now=localtime();
+  print "DEBUG $now: output complete for $g\n"; 
 }
 
 sub is_stop{
@@ -191,5 +218,23 @@ sub average_between_stops {
     }
 
     return @arr;
+}
+
+sub insert_after_positions {
+    my ($arr_ref, $insert_ref) = @_;
+    # $insert_ref is a hash: position => value_to_insert
+
+    my @arr = @$arr_ref;
+    my %ins = %$insert_ref;
+
+    my @out;
+    for my $i (0 .. $#arr) {
+        if (exists $ins{$i}) {
+            push @out, $ins{$i};
+        }
+        push @out, $arr[$i];
+    }
+
+    return @out;
 }
 
