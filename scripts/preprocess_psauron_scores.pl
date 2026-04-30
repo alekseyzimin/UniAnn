@@ -77,23 +77,27 @@ for my $g(keys %genome_seqs){
   my %stops_f1;
   my %stops_f2;
   my $j=0;
-
+  my $n_stops_f0=0;
+  my $n_stops_f1=0;
+  my $n_stops_f2=0;
   for(my $i=0;$i<length($seq_fwd)-3;$i+=3){
     if($stops{$i}){
-      $stops_f0{$j-(keys %stops_f0)}=$stop_value;
+      $stops_f0{$j-$n_stops_f0}++;
+      $n_stops_f0++;
     }elsif($stops{$i+1}){
-      $stops_f1{$j-(keys %stops_f1)}=$stop_value;
+      $stops_f1{$j-$n_stops_f1}++;
+      $n_stops_f1++;
     }elsif($stops{$i+2}){
-      $stops_f2{$j-(keys %stops_f2)}=$stop_value;
+      $stops_f2{$j-$n_stops_f2}++;
+      $n_stops_f2++;
     }
     $j++;
   }
   $now=localtime();
   print "DEBUG $now: stops in frames $g\n";
-  
-  @psauron_frame0_wstops=insert_after_positions(\@psauron_frame0,\%stops_f0);
-  @psauron_frame1_wstops=insert_after_positions(\@psauron_frame1,\%stops_f1);
-  @psauron_frame2_wstops=insert_after_positions(\@psauron_frame2,\%stops_f2);
+  @psauron_frame0_wstops=insert_before_positions(\@psauron_frame0,\%stops_f0);
+  @psauron_frame1_wstops=insert_before_positions(\@psauron_frame1,\%stops_f1);
+  @psauron_frame2_wstops=insert_before_positions(\@psauron_frame2,\%stops_f2);
   $now=localtime();
   print "DEBUG $now: stops inserted for $g\n";
   #replace scores by averages between the stops
@@ -220,18 +224,22 @@ sub average_between_stops {
     return @arr;
 }
 
-sub insert_after_positions {
+sub insert_before_positions {
     my ($arr_ref, $insert_ref) = @_;
-    # $insert_ref is a hash: position => value_to_insert
+    # $insert_ref: position => value OR position => [values...]
 
     my @arr = @$arr_ref;
     my %ins = %$insert_ref;
 
     my @out;
     for my $i (0 .. $#arr) {
-        if (exists $ins{$i}) {
-            push @out, $ins{$i};
+
+        if(exists $ins{$i}) {
+          for(my $j=0;$j<$ins{$i};$j++){
+            push @out, $stop_value;
+          }
         }
+
         push @out, $arr[$i];
     }
 
