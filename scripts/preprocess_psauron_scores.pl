@@ -141,24 +141,22 @@ for my $g(keys %genome_seqs){
     $max_score=$p2 if($p2 > $max_score);
 
     my $scoreN=0.1-$max_score;
-    my $scoreI0=0.1-$max_score;
-    my $scoreI1=0.1-$max_score;
-    my $scoreI2=0.1-$max_score;
+    my $scoreI=0.1-$max_score;
 
 
     if($p0==-1e6){#stop in frame 0,1 or 2
       $scoreN=35;
-      $scoreI0=-1;
+      $scoreI=-1;
     }
     if($p1==-1e6){#stop in frame 0,1 or 2
       $scoreN=35;
-      $scoreI1=-1;
+      $scoreI=-1;
     }
     if($p2==-1e6){#stop in frame 0,1 or 2
       $scoreN=35;
-      $scoreI2=-1;
+      $scoreI=-1;
     }
-    printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI0,$scoreI1,$scoreI2,substr($seq_fwd,$i,1);
+    printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI,$scoreI,$scoreI,substr($seq_fwd,$i,1);
     $pp0=$p0 if($p0 > -1e6);
     $pp1=$p1 if($p1 > -1e6);
     $pp2=$p2 if($p2 > -1e6);
