@@ -1,4 +1,12 @@
 #!/bin/bash
+
+FASTA="genome.fa"
+POS_PWM="genome.coding.pwm"
+NEG_PWM="genome.neg.pwm"
+START_PWM="genome.start.pwm"
+PSAURON="psauron_score.csv"
+MIN_CDS=180
+
 GC=
 RC=
 NC=
@@ -33,7 +41,7 @@ echo "-f file sith a single fasta sequence"
 echo "-s start PWM models"
 echo "-p positive PWM/WAM splice site models"
 echo "-n negative PWM/WAM splice site models"
-
+echo "-g psauron score file"
 }
 
 #parsing arguments
@@ -49,6 +57,10 @@ do
     case $key in
         -f|--fasta)
             FASTA="$2"
+            shift
+            ;;
+        -g|--psauron)
+            PSAURON="$2"
             shift
             ;;
         -s|--start)
@@ -102,14 +114,29 @@ usage
 exit 1
 fi
 
+if [[ ! -s $PSAURON ]];then
+echo "Input file of PSAURON scores $PSAURON not found or not specified!"
+usage
+exit 1
+fi
+
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
-which psauron
-psauron -i $FASTA -a 1>psauron.out 2>&1 && \
-$MYPATH/preprocess_psauron_scores.pl $FASTA psauron_score.csv &&\
+
+#this produces out.ps.txt
+log "Preprocessing psauron scores" && \
+$MYPATH/preprocess_psauron_scores.pl $FASTA $PSAURON && \
 #this produces out.atg.txt
+log "Scoring candidate start sites" && \
 $MYPATH/score_start_sites.pl $START_PWM < $FASTA && \
-#this produces out.gt.txt and out.ag.txt 
+#this produces out.gt.txt and out.ag.txt
+log "Scoring candidate splice sites" && \
 $MYPATH/compute_markov_scores $FASTA $POS_PWM $NEG_PWM && \
-$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt 2>out.err | tee >( grep -v region|gffread -F >$FASTA.gff) > out.txt
+log "Building gene models" && \
+$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt 2>out.err| \
+  tee >( grep -v region|gffread --tlf | \
+    perl -F'\t' -ane '{if($F[8]=~/ID=(\S+);exonCount=(\d+);exons=(\S+);CDS=(\d+):(\d+);CDSphase/){ print if( $5-$4 > '$MIN_CDS')}}' |\
+    gffread -F  >$FASTA.gff.tmp) > $FASTA.debug.gff.tmp && \
+mv $FASTA.gff.tmp $FASTA.gff && \
+mv $FASTA.debug.gff.tmp $FASTA.debug.gff && \
 echo "Output gff file is $FASTA.gff"

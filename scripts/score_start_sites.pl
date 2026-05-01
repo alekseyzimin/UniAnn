@@ -21,7 +21,6 @@ for($i=0;$i<4;$i++){
 }
 
 if(-e $model_file){
-  print "DEBUG Loading Start HMMs\n";
   open(FILE,$model_file);
   $line=<FILE>;
   if($line =~ /^zoeHMM/){#check format
