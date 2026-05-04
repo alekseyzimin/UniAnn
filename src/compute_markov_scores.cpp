@@ -403,18 +403,20 @@ int main(int argc, char** argv) {
                             acceptor_hmm2_nscore += acceptor_hmm_nfreq[0][idx];
                     }
                 }
-                acceptor_hmm2_score = (acceptor_hmm2_score - acceptor_hmm2_nscore) / 2.0;
+                acceptor_hmm2_score = (acceptor_hmm2_score - acceptor_hmm2_nscore) / 1.8;
                 acceptor_fwd_hmm2_score[pos] = acceptor_hmm2_score;
             }
         }
 
         // thresholding and printing
-        double splice_t = -1.5;
+        double splice_t = -1.0;
+        double donor_mult = 30;
+        double acceptor_mult = 30;
         for (int i = 0; i < (int)seq_fwd.size(); ++i) {
             auto it = don_fwd_hmm2_score.find(i);
             if (it != don_fwd_hmm2_score.end()) {
                 double val = it->second;
-                val = (val > splice_t) ? val * 70.0 : -1e3;
+                val = (val > splice_t ) ? val * donor_mult : -1e3;
                 fout_gt << i << "\t" << val << "\n";
             }
         }
@@ -422,7 +424,7 @@ int main(int argc, char** argv) {
             auto it = acceptor_fwd_hmm2_score.find(i);
             if (it != acceptor_fwd_hmm2_score.end()) {
                 double val = it->second;
-                val = (val > (splice_t * 2.0)) ? val * 50.0 : -1e3;
+                val = (val > splice_t ) ? val * acceptor_mult : -1e3;
                 fout_ag << i << "\t" << val << "\n";
             }
         }
