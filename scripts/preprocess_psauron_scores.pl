@@ -108,6 +108,10 @@ for my $g(keys %genome_seqs){
   my ($p0,$p1,$p2)=(0,0,0);
   my ($pp0,$pp1,$pp2)=(0,0,0);
   for(my $i=0;$i<length($seq_fwd);$i++){
+    if(not(substr($seq_fwd,$i,1) =~ /ACGTacgt/)){
+      printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,0,-1e6,-1e6,-1e6,0,0,0,substr($seq_fwd,$i,1);
+      next;
+    }
     ($p0,$p1,$p2)=(0,0,0);
     $p0=$psauron_frame0_wstops[int($i/3)] if defined($psauron_frame0_wstops[int($i/3)]);
     $p1=$psauron_frame1_wstops[int(($i-1)/3)] if ($i>0);

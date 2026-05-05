@@ -5,7 +5,8 @@ POS_PWM="genome.coding.pwm"
 NEG_PWM="genome.neg.pwm"
 START_PWM="genome.start.pwm"
 PSAURON="psauron_score.csv"
-MIN_CDS=180
+MIN_CDS=300
+MIN_SINGLE_CDS=400
 
 GC=
 RC=
@@ -135,8 +136,12 @@ $MYPATH/compute_markov_scores $FASTA $POS_PWM $NEG_PWM && \
 log "Building gene models" && \
 $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt 2>out.err| \
   tee >( grep -v region|gffread --tlf | \
-    perl -F'\t' -ane '{if($F[8]=~/ID=(\S+);exonCount=(\d+);exons=(\S+);CDS=(\d+):(\d+);CDSphase/){ print if( $5-$4 > '$MIN_CDS')}}' |\
-    gffread -F  >$FASTA.gff.tmp) > $FASTA.debug.gff.tmp && \
+    perl -F'\t' -ane '{
+      if($F[8]=~/ID=(\S+);exonCount=(\d+);exons=(\S+);CDS=(\d+):(\d+);CDSphase/){
+        print if(($2==1 && $5-$4 > '$MIN_SINGLE_CDS') || ($2 > 1 && $5-$4 > '$MIN_CDS'));
+      }
+    }' |\
+    gffread -F  >$FASTA.gff.tmp) > $FASTA.all.gff.tmp && \
 mv $FASTA.gff.tmp $FASTA.gff && \
-mv $FASTA.debug.gff.tmp $FASTA.debug.gff && \
+mv $FASTA.all.gff.tmp $FASTA.all.gff && \
 echo "Output gff file is $FASTA.gff"
