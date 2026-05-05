@@ -108,7 +108,7 @@ for my $g(keys %genome_seqs){
   my ($p0,$p1,$p2)=(0,0,0);
   my ($pp0,$pp1,$pp2)=(0,0,0);
   for(my $i=0;$i<length($seq_fwd);$i++){
-    if(not(substr($seq_fwd,$i,1) =~ /ACGTacgt/)){
+    if(not(substr($seq_fwd,$i,1) =~ /A|C|G|T|a|c|g|t/)){
       printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,0,-1e6,-1e6,-1e6,0,0,0,substr($seq_fwd,$i,1);
       next;
     }
