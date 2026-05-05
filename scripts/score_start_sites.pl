@@ -104,7 +104,7 @@ for my $g(keys %genome_seqs){
       $start_hmm2_score+=$start_hmm2_freq[$i][$code3{substr($start_seq,$i,3)}] if(defined($code3{substr($start_seq,$i,3)}));
     }
     $start_hmm2_score+=$start_hmm_freq[0][$code2{substr($start_seq,0,2)}] if(defined($code2{substr($start_seq,0,2)}));
-    $start_hmm2_score=-1000 if($start_hmm2_score<10);
+    $start_hmm2_score=-1000 if($start_hmm2_score<15);
     print FILEATG "$pos\t",$start_hmm2_score,"\n";
     $startfwd_hmm2_score{$pos}=$start_hmm2_score;
   }
