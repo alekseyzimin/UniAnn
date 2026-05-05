@@ -54,7 +54,7 @@ for my $g(keys %genome_seqs){
   @psauron_frame1=split(/;/,$psauron_scores_1f{$g});
   @psauron_frame2=split(/;/,$psauron_scores_2f{$g});
    
-  my $mult=30;
+  my $mult=40;
   my $lmult=log($mult);
   #my $off=0.2;
   $_ = log($_*$mult+1e-6)/$lmult for @psauron_frame0;
@@ -142,18 +142,18 @@ for my $g(keys %genome_seqs){
 
     my $scoreN=0.1-$max_score;
     my $scoreI=0.1-$max_score;
-
+    my $stop_n_score=35;
 
     if($p0==-1e6){#stop in frame 0,1 or 2
-      $scoreN=35;
+      $scoreN=$stop_n_score;
       $scoreI=-1;
     }
     if($p1==-1e6){#stop in frame 0,1 or 2
-      $scoreN=35;
+      $scoreN=$stop_n_score;
       $scoreI=-1;
     }
     if($p2==-1e6){#stop in frame 0,1 or 2
-      $scoreN=35;
+      $scoreN=$stop_n_score;
       $scoreI=-1;
     }
     printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI,$scoreI,$scoreI,substr($seq_fwd,$i,1);
