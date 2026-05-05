@@ -302,21 +302,19 @@ void run_viterbi(
                     toupper(b_prev) == 'G' && toupper(b) == 'T')
                 {
                     int len = dp[i - 1][from].exon_len - 2;
+                    log_t = -1e9;
 
+                    if ((to - 4) == (from - 1) && len >= MIN_EXON) {
                     cerr << "DEBUG at " << i
                          << " trying transition " << state_name[from]
                          << " " << state_name[to]
                          << " score " << dp[i - 1][from].dp
                          << " emit " << emit_log
                          << " length " << len << "\n";
-
-                    log_t = -1e9;
-
-                    if ((to - 4) == (from - 1) && len >= MIN_EXON) {
                         log_t = gt_score[i - 1];
                     }
 
-                    cerr << "DEBUG probability " << log_t << "\n";
+                    cerr << "DEBUG GT probability " << log_t << "\n";
                 }
 
                 //--------------------------------------------------------
@@ -326,20 +324,18 @@ void run_viterbi(
                     toupper(b_prev) == 'A' && toupper(b) == 'G')
                 {
                     int len = dp[i - 1][from].intron_len + 2;
-
-                    cerr << "DEBUG at " << i
-                         << " trying transition " << state_name[from]
-                         << " " << state_name[to]
-                         << " score " << dp[i - 1][from].dp
-                         << " emit " << emit_log
-                         << " length " << len << "\n";
-
                     log_t = -1e9;
 
                     if (len >= MIN_INTRON) {
                         int f = from - 4; // intron frame 0,1,2
                         int e = to - 1;   // exon frame 0,1,2
                         int mod = len % 3;
+                        cerr << "DEBUG at " << i
+                         << " trying transition " << state_name[from]
+                         << " " << state_name[to]
+                         << " score " << dp[i - 1][from].dp
+                         << " emit " << emit_log
+                         << " length " << len << "\n";
 
                         // Frame‑compatible transitions
                         if ((f == 0 && e == 0) || (f == 1 && e == 1) || (f == 2 && e == 2)) {
@@ -353,24 +349,24 @@ void run_viterbi(
                         }
                     }
 
-                    cerr << "DEBUG probability " << log_t << "\n";
+                    cerr << "DEBUG AG probability " << log_t << "\n";
                 }
 
                 //--------------------------------------------------------
                 // Exon → Noncoding after STOP codon (TAA, TAG, TGA)
                 //--------------------------------------------------------
                 if (is_exon(from) && to == 0 && is_stop) {
-                    cerr << "DEBUG at " << i
+
+                    int frame = from - 1;
+                    if (((i - 2) % 3) == frame) {
+                        cerr << "DEBUG at " << i
                              << " trying transition " << state_name[from]
                              << " " << state_name[to]
                              << " score " << dp[i - 1][from].dp
                              << " emission " << emit_log << "\n";
-
-                    int frame = from - 1;
-                    if (((i - 2) % 3) == frame) {
                         log_t = 1.0; // max_log_prob
                     }
-                    cerr << "DEBUG probability " << log_t << "\n";
+                    cerr << "DEBUG STOP probability " << log_t << "\n";
                 }
 
                 //--------------------------------------------------------
@@ -384,14 +380,14 @@ void run_viterbi(
                     int len = dp[i - 1][from].inter_len + 2;
                     if (codon == "ATG" && (len >= MIN_INTER || i < MIN_INTER) && dp[i-1][from].bt == 0) { //must come from non-coding
 
+                        int frame = to - 1;
+                        if (((i - 2) % 3) == frame) { //only in the right frame and if psauron score is positive in this frame
                         cerr << "DEBUG at " << i
                              << " trying transition " << state_name[from]
                              << " " << state_name[to]
                              << " score " << dp[i - 1][from].dp
                              << " emission " << emit_log << "\n";
 
-                        int frame = to - 1;
-                        if (((i - 2) % 3) == frame) { //only in the right frame and if psauron score is positive in this frame
                             if (i < 25) {
                               log_t = 1.0;
                             } else {
@@ -400,7 +396,7 @@ void run_viterbi(
                             }
                         }
 
-                        cerr << "DEBUG probability " << log_t << "\n";
+                        cerr << "DEBUG ATG probability " << log_t << "\n";
                     }
                 }
 
