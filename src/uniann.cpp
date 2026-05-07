@@ -24,7 +24,7 @@ static const array<string, NUM_STATES> state_name = {
 
 static const double NEG_INF = -1e9;
 static const int MIN_INTRON = 30;
-static const int MIN_EXON   = 6;
+static const int MIN_EXON   = 30;
 static const int MIN_INTER  = 200;
 
 //------------------------------------------------------------
@@ -301,7 +301,7 @@ void run_viterbi(
                 if (is_exon(from) && is_intron(to) &&
                     toupper(b_prev) == 'G' && toupper(b) == 'T')
                 {
-                    int len = dp[i - 1][from].exon_len - 1;
+                    int len = dp[i - 1][from].exon_len - 2;
                     log_t = NEG_INF;
                     cerr << "DEBUG at " << i
                          << " trying transition " << state_name[from]
@@ -323,7 +323,7 @@ void run_viterbi(
                 if (is_intron(from) && is_exon(to) &&
                     toupper(b_prev) == 'A' && toupper(b) == 'G')
                 {
-                    int len = dp[i - 1][from].intron_len;
+                    int len = dp[i - 1][from].intron_len + 2;
                     log_t = NEG_INF;
 
                     if (len >= MIN_INTRON) {
@@ -432,11 +432,10 @@ void run_viterbi(
                 if (best_from >= 0 && is_exon(best_from))
                     dp[i][to].exon_len = dp[i - 1][best_from].exon_len + 1;
                 else {
-                  if (best_from == 0){
-                    dp[i][to].exon_len = 4; //count the ATG
-                  } else {
-                    dp[i][to].exon_len = 1;
-                  }
+                  if (best_from == 0)
+                    dp[i][to].exon_len = MIN_EXON; //count the ATG
+                  else 
+                    dp[i][to].exon_len = 1;   
                 }
             } else {
                 dp[i][to].exon_len = 0;
