@@ -22,9 +22,9 @@ static const array<string, NUM_STATES> state_name = {
     "N", "E0", "E1", "E2", "I0", "I1", "I2"
 };
 
-static const double NEG_INF = NEG_INF;
+static const double NEG_INF = -1e9;
 static const int MIN_INTRON = 30;
-static const int MIN_EXON   = 3;
+static const int MIN_EXON   = 6;
 static const int MIN_INTER  = 200;
 
 //------------------------------------------------------------
@@ -303,8 +303,6 @@ void run_viterbi(
                 {
                     int len = dp[i - 1][from].exon_len - 2;
                     log_t = NEG_INF;
-
-                    if ((to - 4) == (from - 1) && len >= MIN_EXON) {
                     cerr << "DEBUG at " << i
                          << " trying transition " << state_name[from]
                          << " " << state_name[to]
@@ -312,7 +310,10 @@ void run_viterbi(
                          << " emit " << emit_log
                          << " length " << len << "\n";
                         log_t = gt_score[i - 1];
-                        //set min exon back up
+
+
+                    if ((to - 4) == (from - 1) && len >= MIN_EXON) {
+                        log_t = gt_score[i - 1];
                     }
 
                     cerr << "DEBUG GT probability " << log_t << "\n";
