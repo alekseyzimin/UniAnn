@@ -22,9 +22,9 @@ static const array<string, NUM_STATES> state_name = {
     "N", "E0", "E1", "E2", "I0", "I1", "I2"
 };
 
-static const double NEG_INF = -1e9;
+static const double NEG_INF = NEG_INF;
 static const int MIN_INTRON = 30;
-static const int MIN_EXON   = 40;
+static const int MIN_EXON   = 3;
 static const int MIN_INTER  = 200;
 
 //------------------------------------------------------------
@@ -192,7 +192,7 @@ void safety_check_gt_ag_atg(
 // Baseline transition matrix (log-space), excluding GT/AG overrides
 //------------------------------------------------------------
 vector<vector<double>> init_transitions() {
-    vector<vector<double>> trans(NUM_STATES, vector<double>(NUM_STATES, -1e9));
+    vector<vector<double>> trans(NUM_STATES, vector<double>(NUM_STATES, NEG_INF));
 
     double self_prob = 0.9;
 
@@ -230,7 +230,7 @@ vector<vector<DPCell>> init_dp(int L,
 
     // Initialization at position 0 — force start in N
     for (int s = 0; s < NUM_STATES; s++) {
-        double start_prob = (s == 0 ? 0.0 : -1e9);
+        double start_prob = (s == 0 ? 0.0 : NEG_INF);
         double e = emit[0][s];
 
         dp[0][s].dp = start_prob + e;
@@ -291,7 +291,7 @@ void run_viterbi(
                 //prohibit staying in the exon if a stop is found
                 if (is_exon(to) && is_exon(from) && from==to && is_stop) {
                   if (((i - 2) % 3) == to - 1) {
-                    log_t = -1e9;
+                    log_t = NEG_INF;
                   }
                 }
 
@@ -302,7 +302,7 @@ void run_viterbi(
                     toupper(b_prev) == 'G' && toupper(b) == 'T')
                 {
                     int len = dp[i - 1][from].exon_len - 2;
-                    log_t = -1e9;
+                    log_t = NEG_INF;
 
                     if ((to - 4) == (from - 1) && len >= MIN_EXON) {
                     cerr << "DEBUG at " << i
@@ -312,6 +312,7 @@ void run_viterbi(
                          << " emit " << emit_log
                          << " length " << len << "\n";
                         log_t = gt_score[i - 1];
+                        //set min exon back up
                     }
 
                     cerr << "DEBUG GT probability " << log_t << "\n";
@@ -324,7 +325,7 @@ void run_viterbi(
                     toupper(b_prev) == 'A' && toupper(b) == 'G')
                 {
                     int len = dp[i - 1][from].intron_len + 2;
-                    log_t = -1e9;
+                    log_t = NEG_INF;
 
                     if (len >= MIN_INTRON) {
                         int f = from - 4; // intron frame 0,1,2
@@ -682,6 +683,21 @@ int main(int argc, char** argv) {
     // Run full Viterbi
     //--------------------------------------------------------
     run_viterbi(dp, emit, gt_score, ag_score, atg_score, seq, trans);
+
+    //print DP and BT matrices
+    for (int i = 0; i < L; i++) {
+        cerr << i << "\tdp";
+        for (int j = 0; j < 7; j++) {
+          fprintf(stderr,"\t%d",int(dp[i][j].dp));
+        }
+        cerr << "\n";
+        cerr << i << "\tbt";
+        for (int j = 0; j < 7; j++) {
+          fprintf(stderr,"\t%d",int(dp[i][j].bt));
+        }
+        cerr << "\n";
+    }
+
 
     //--------------------------------------------------------
     // Termination
