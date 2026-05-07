@@ -301,7 +301,7 @@ void run_viterbi(
                 if (is_exon(from) && is_intron(to) &&
                     toupper(b_prev) == 'G' && toupper(b) == 'T')
                 {
-                    int len = dp[i - 1][from].exon_len - 2;
+                    int len = dp[i - 1][from].exon_len - 1;
                     log_t = NEG_INF;
                     cerr << "DEBUG at " << i
                          << " trying transition " << state_name[from]
@@ -309,8 +309,6 @@ void run_viterbi(
                          << " score " << dp[i - 1][from].dp
                          << " emit " << emit_log
                          << " length " << len << "\n";
-                        log_t = gt_score[i - 1];
-
 
                     if ((to - 4) == (from - 1) && len >= MIN_EXON) {
                         log_t = gt_score[i - 1];
@@ -325,7 +323,7 @@ void run_viterbi(
                 if (is_intron(from) && is_exon(to) &&
                     toupper(b_prev) == 'A' && toupper(b) == 'G')
                 {
-                    int len = dp[i - 1][from].intron_len + 2;
+                    int len = dp[i - 1][from].intron_len;
                     log_t = NEG_INF;
 
                     if (len >= MIN_INTRON) {
@@ -433,8 +431,13 @@ void run_viterbi(
             if (is_exon(to)) {
                 if (best_from >= 0 && is_exon(best_from))
                     dp[i][to].exon_len = dp[i - 1][best_from].exon_len + 1;
-                else
+                else {
+                  if (best_from == 0){
+                    dp[i][to].exon_len = 4; //count the ATG
+                  } else {
                     dp[i][to].exon_len = 1;
+                  }
+                }
             } else {
                 dp[i][to].exon_len = 0;
             }
@@ -686,18 +689,18 @@ int main(int argc, char** argv) {
     run_viterbi(dp, emit, gt_score, ag_score, atg_score, seq, trans);
 
     //print DP and BT matrices
-    for (int i = 0; i < L; i++) {
-        cerr << i << "\tdp";
-        for (int j = 0; j < 7; j++) {
-          fprintf(stderr,"\t%d",int(dp[i][j].dp));
-        }
-        cerr << "\n";
-        cerr << i << "\tbt";
-        for (int j = 0; j < 7; j++) {
-          fprintf(stderr,"\t%d",int(dp[i][j].bt));
-        }
-        cerr << "\n";
-    }
+    //for (int i = 0; i < L; i++) {
+    //    cerr << i << "\tdp";
+    //    for (int j = 0; j < 7; j++) {
+    //      fprintf(stderr,"\t%d",int(dp[i][j].dp));
+    //    }
+    //    cerr << "\n";
+    //    cerr << i << "\tbt";
+    //    for (int j = 0; j < 7; j++) {
+    //      fprintf(stderr,"\t%d",int(dp[i][j].bt));
+    //    }
+    //    cerr << "\n";
+    //}
 
 
     //--------------------------------------------------------
