@@ -195,7 +195,7 @@ void safety_check_gt_ag_atg(
 vector<vector<double>> init_transitions() {
     vector<vector<double>> trans(NUM_STATES, vector<double>(NUM_STATES, NEG_INF));
 
-    double self_prob = 0.9;
+    double self_prob = 0.0;
 
     // Noncoding self
     trans[0][0] = self_prob;
@@ -630,11 +630,11 @@ void write_gff_from_path(
       }
       if(end > start) {
         if(is_label_exon(current_state) && is_label_intron(previous_state)) {
-          write_gff_feature(seqid, current_state, start+2, end, f_fasta, scores[i]-score_offset);
+          write_gff_feature(seqid, current_state, start+2, end, f_fasta, (scores[i]-score_offset)/(end-start+1));
         }else if(is_label_intron(current_state) && is_label_exon(previous_state)) {
-          write_gff_feature(seqid, current_state, start, end+2, f_fasta, scores[i]-score_offset);
+          write_gff_feature(seqid, current_state, start, end+2, f_fasta, (scores[i]-score_offset)/(end-start+1));
         }else{
-          write_gff_feature(seqid, current_state, start, end, f_fasta, scores[i]-score_offset); 
+          write_gff_feature(seqid, current_state, start, end, f_fasta, (scores[i]-score_offset)/(end-start+1)); 
         }
       }
       if (current_state == "N"){
