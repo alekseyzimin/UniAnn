@@ -144,8 +144,8 @@ for my $g(keys %genome_seqs){
     $max_score=$p1 if($p1 > $max_score);
     $max_score=$p2 if($p2 > $max_score);
 
-    my $scoreN=0.1-$max_score;
-    my $scoreI=0.1-$max_score;
+    my $scoreN=0-$max_score;
+    my $scoreI=1-$max_score;
     my $stop_n_score=35;
 
     if($p0==-1e6){#stop in frame 0,1 or 2
