@@ -26,6 +26,7 @@ static const double NEG_INF = -1e9;
 static const int MIN_INTRON = 30;
 static const int MIN_EXON   = 30;
 static const int MIN_INTER  = 200;
+static const int MIN_SINGLE = 200;
 
 //------------------------------------------------------------
 // Helpers
@@ -221,6 +222,7 @@ struct DPCell {
     int intron_len;
     int exon_len;
     int inter_len;
+    int exon_from;
 };
 
 vector<vector<DPCell>> init_dp(int L,
@@ -238,6 +240,7 @@ vector<vector<DPCell>> init_dp(int L,
         dp[0][s].intron_len = is_intron(s) ? 1 : 0;
         dp[0][s].exon_len   = is_exon(s)   ? 1 : 0;
         dp[0][s].inter_len  = (s == 0)   ? 1 : 0;
+        dp[0][s].exon_from   = is_exon(s)   ? 0 : 0;
     }
 
     return dp;
@@ -356,15 +359,20 @@ void run_viterbi(
                 // Exon → Noncoding after STOP codon (TAA, TAG, TGA)
                 //--------------------------------------------------------
                 if (is_exon(from) && to == 0 && is_stop) {
-
+                    int len = dp[i - 1][from].exon_len - 2;
                     int frame = from - 1;
                     if (((i - 2) % 3) == frame) {
                         cerr << "DEBUG at " << i
                              << " trying transition " << state_name[from]
                              << " " << state_name[to]
+                             << " origin "<< dp[i-1][from].exon_from
                              << " score " << dp[i - 1][from].dp
                              << " emission " << emit_log << "\n";
-                        log_t = 1.0; // max_log_prob
+                        if(is_intron(dp[i-1][from].exon_from) || (dp[i-1][from].exon_from == 0 && len > MIN_SINGLE)){ // if came from intron or came from noncoding and min length satisfied
+                          log_t = 1.0; // max_log_prob
+                        }else{
+                          log_t = -1e3;
+                        }
                     }
                     cerr << "DEBUG STOP probability " << log_t << "\n";
                 }
@@ -441,6 +449,19 @@ void run_viterbi(
                 dp[i][to].exon_len = 0;
             }
 
+            // Track if the first exon
+            if (is_exon(to)) {
+              if (best_from >= 0) {
+                if(is_exon(best_from)){
+                  dp[i][to].exon_from=dp[i-1][to].exon_from;
+                } else {
+                  dp[i][to].exon_from = best_from;
+                }
+              }else{
+                dp[i][to].exon_from = -1;
+              }
+            }
+  
             // Track inter length
             if (to == 0) {
                 if (best_from == 0)
