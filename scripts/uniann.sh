@@ -135,7 +135,24 @@ log "Scoring candidate splice sites" && \
 $MYPATH/compute_markov_scores $FASTA $POS_PWM $NEG_PWM && \
 log "Building gene models" && \
 $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt 2>out.err| \
-  tee >( grep -v region|gffread --tlf | \
+  tee >( perl -ane '{
+          push @lines,$_;
+        }END{
+          $prev="region";
+          for(my $i=0;$i<$#lines;$i++){
+            @f=split(/\t/,$lines[$i]);
+            @ff=split(/\t/,$lines[$i+1]);
+            if($prev eq "region" && $f[2] eq "CDS" && $ff[2] eq "region"){
+              print $lines[$i] if($f[5]>0.75);
+            }else{
+              print $lines[$i] unless($f[2] =~ /region|intron/);
+            }
+            $prev=$f[2]; 
+          }
+          @f=split(/\t/,$lines[-1]);
+          print $lines[-1] unless($f[2] =~ /region|intron/);
+        }'  |\
+    gffread --tlf | \
     perl -F'\t' -ane '{
       if($F[8]=~/ID=(\S+);exonCount=(\d+);exons=(\S+);CDS=(\d+):(\d+);CDSphase/){
         print if(($2==1 && $5-$4 > '$MIN_SINGLE_CDS') || ($2 > 1 && $5-$4 > '$MIN_CDS'));
