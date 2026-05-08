@@ -299,21 +299,22 @@ void run_viterbi(
                 }
 
                 //--------------------------------------------------------
-                // Exon → Intron only at GT AND only if exon length ≥ MIN_EXON
+                // Exon → Intron only at GT AND only if exon length ≥ MIN_EXON or it is the first exon
                 //--------------------------------------------------------
                 if (is_exon(from) && is_intron(to) &&
                     toupper(b_prev) == 'G' && toupper(b) == 'T')
                 {
                     int len = dp[i - 1][from].exon_len - 2;
                     log_t = NEG_INF;
+
+                    if ((to - 4) == (from - 1) && (len >= MIN_EXON || dp[i - 1][from].exon_from == 0)) {
+                    // go into intron in the same frame
                     cerr << "DEBUG at " << i
                          << " trying transition " << state_name[from]
                          << " " << state_name[to]
                          << " score " << dp[i - 1][from].dp
                          << " emit " << emit_log
                          << " length " << len << "\n";
-
-                    if ((to - 4) == (from - 1) && len >= MIN_EXON) {
                         log_t = gt_score[i - 1];
                     }
 
@@ -441,7 +442,7 @@ void run_viterbi(
                     dp[i][to].exon_len = dp[i - 1][best_from].exon_len + 1;
                 else {
                   if (best_from == 0)
-                    dp[i][to].exon_len = MIN_EXON; //count the ATG
+                    dp[i][to].exon_len = 3; //count the ATG
                   else 
                     dp[i][to].exon_len = 1;   
                 }
