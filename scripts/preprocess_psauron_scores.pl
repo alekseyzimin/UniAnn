@@ -128,7 +128,7 @@ for my $g(keys %genome_seqs){
     }
     
     #my $min_diff=0.5;
-    #my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
+    my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
     #if($scores_sorted[2]-$scores_sorted[1]>$min_diff && $scores_sorted[2]>0){
     #  $p0+=1-$scores_sorted[2] if($p0>-1e6 && $scores_sorted[2]>0);
     #  $p1+=1-$scores_sorted[2] if($p1>-1e6 && $scores_sorted[2]>0);
@@ -139,14 +139,15 @@ for my $g(keys %genome_seqs){
     #  $p1-=$scores_sorted[1] if($p1>-1e6 && $scores_sorted[1]>0);
     #  $p2-=$scores_sorted[1] if($p2>-1e6 && $scores_sorted[1]>0);
     #}
-
-    my $max_score=$p0;
-    $max_score=$p1 if($p1 > $max_score);
-    $max_score=$p2 if($p2 > $max_score);
-
-    my $scoreN=0-$max_score;
-    my $scoreI=1-$max_score;
-    my $stop_n_score=35;
+    
+    my $scoreN=0;
+    if($scores_sorted[2]>0){
+      $scoreN=0.25-($scores_sorted[2]-$scores_sorted[1]);
+    }else{
+      $scoreN=1;
+    }
+    my $scoreI=1-$scores_sorted[2];
+    my $stop_n_score=20;
 
     if($p0==-1e6){#stop in frame 0,1 or 2
       $scoreN=$stop_n_score;
