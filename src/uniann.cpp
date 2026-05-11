@@ -710,18 +710,18 @@ int main(int argc, char** argv) {
     run_viterbi(dp, emit, gt_score, ag_score, atg_score, seq, trans);
 
     //print DP and BT matrices
-    //for (int i = 0; i < L; i++) {
-    //    cerr << i << "\tdp";
-    //    for (int j = 0; j < 7; j++) {
-    //      fprintf(stderr,"\t%d",int(dp[i][j].dp));
-    //    }
-    //    cerr << "\n";
-    //    cerr << i << "\tbt";
-    //    for (int j = 0; j < 7; j++) {
-    //      fprintf(stderr,"\t%d",int(dp[i][j].bt));
-    //    }
-    //    cerr << "\n";
-    //}
+    for (int i = 0; i < L; i++) {
+        cerr << i << "\tdp";
+        for (int j = 0; j < 7; j++) {
+          fprintf(stderr,"\t%d",int(dp[i][j].dp));
+        }
+        cerr << "\n";
+        cerr << i << "\tbt";
+        for (int j = 0; j < 7; j++) {
+          fprintf(stderr,"\t%d",int(dp[i][j].bt));
+        }
+        cerr << "\n";
+    }
 
 
     //--------------------------------------------------------
