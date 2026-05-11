@@ -143,7 +143,8 @@ $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt 2>out.err| \
             @f=split(/\t/,$lines[$i]);
             @ff=split(/\t/,$lines[$i+1]);
             if($prev eq "region" && $f[2] eq "CDS" && $ff[2] eq "region"){
-              print $lines[$i] if($f[5]>0.75);
+            #AVERAGE SCORE MUCT BE ABOVE .5 FOR SINGLE EXON
+              print $lines[$i] if($f[5]>0.5);
             }else{
               print $lines[$i] unless($f[2] =~ /region|intron/);
             }
