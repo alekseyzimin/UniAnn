@@ -49,7 +49,8 @@ for my $g(keys %genome_seqs){
   #only doing forward for now!!!
   $now=localtime();
   print "DEBUG $now: starting scaffold $g\n";
-  my $seq_fwd=uc($genome_seqs{$g});
+  my $seq_fwd=$genome_seqs{$g};
+  my $seq_fwd_u=uc($seq_fwd);
   @psauron_frame0=split(/;/,$psauron_scores_0f{$g});
   @psauron_frame1=split(/;/,$psauron_scores_1f{$g});
   @psauron_frame2=split(/;/,$psauron_scores_2f{$g});
@@ -67,7 +68,7 @@ for my $g(keys %genome_seqs){
   
   #find all stops and insert large negative score for an in frame stop 
   my %stops;
-  while($seq_fwd =~ /TAA|TAG|TGA/g){
+  while($seq_fwd_u =~ /TAA|TAG|TGA/g){
     $stops{$-[0]}=1;
   }
   $now=localtime();

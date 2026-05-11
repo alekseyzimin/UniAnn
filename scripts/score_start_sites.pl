@@ -90,7 +90,6 @@ open(FILEATG,">out.atg.txt");
 for my $g(keys %genome_seqs){
   #only doing forward for now!!!
   my $seq_fwd=uc($genome_seqs{$g});
-  my $seq_rev=$seq_fwd;
   my @start_fwd_pos=();
   #find starts fwd
   while ($seq_fwd =~ /ATG/g) {

@@ -383,9 +383,9 @@ void run_viterbi(
                 //--------------------------------------------------------
                 if (is_exon(to) && from == 0 && i >= 2) {
                     string codon;
-                    codon.push_back(seq[i - 2]);
-                    codon.push_back(seq[i - 1]);
-                    codon.push_back(seq[i]);
+                    codon.push_back(toupper(seq[i - 2]));
+                    codon.push_back(toupper(seq[i - 1]));
+                    codon.push_back(toupper(seq[i]));
                     int len = dp[i - 1][from].inter_len + 2;
                     if (codon == "ATG" && (len >= MIN_INTER || i < MIN_INTER) && dp[i-1][from].bt == 0) { //must come from non-coding
 
