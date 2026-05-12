@@ -84,8 +84,7 @@ while(my $line=<STDIN>){
   } 
 }   
 $genome_seqs{$scf}=$seq if(not($scf eq ""));
-
-
+$start_length=45 if($start_length > 45);
 open(FILEATG,">out.atg.txt");
 for my $g(keys %genome_seqs){
   #only doing forward for now!!!
@@ -96,14 +95,15 @@ for my $g(keys %genome_seqs){
     push @start_fwd_pos, pos($seq_fwd) - 3 if(pos($seq_fwd)>$start_length-2);  # subtract length of "ATG" (2) to get start index
   }
   for $pos(@start_fwd_pos){
-    my $start_seq=substr($seq_fwd,$pos-($start_length-6),$start_length);
+    #ATG position fixed on the start seq
+    my $start_seq=substr($seq_fwd,$pos-19,$start_length);
     my $start_hmm2_score=0;
     
     for(my $i=0;$i<($start_length-2);$i++){
       $start_hmm2_score+=$start_hmm2_freq[$i][$code3{substr($start_seq,$i,3)}] if(defined($code3{substr($start_seq,$i,3)}));
     }
     $start_hmm2_score+=$start_hmm_freq[0][$code2{substr($start_seq,0,2)}] if(defined($code2{substr($start_seq,0,2)}));
-    $start_hmm2_score=-1000 if($start_hmm2_score<14);
+    $start_hmm2_score=-1000 if($start_hmm2_score<10);
     print FILEATG "$pos\t",$start_hmm2_score,"\n";
     $startfwd_hmm2_score{$pos}=$start_hmm2_score;
   }
