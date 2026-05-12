@@ -141,23 +141,24 @@ for my $g(keys %genome_seqs){
     #  $p2-=$scores_sorted[1] if($p2>-1e6 && $scores_sorted[1]>0);
     #}
     
-    my $scoreN=0;
-    $scoreN=0.25-($scores_sorted[2]-$scores_sorted[1]) if($scores_sorted[2]>0);
-    
+    my $scoreN=3;
     my $scoreI=1.-$scores_sorted[2];
-    my $stop_n_score=64./3.;
+    $scoreN=0.25-($scores_sorted[2]-$scores_sorted[1]) if($scores_sorted[2]>0);
 
-    if($p0==-1e6){#stop in frame 0,1 or 2
+    my $stop_n_score=10;
+    my $stop_i_score=-3;
+
+    if($p0==-1e6){#stop in frame 0
       $scoreN=$stop_n_score;
-      $scoreI=-1;
+      $scoreI=$stop_i_score;
     }
-    if($p1==-1e6){#stop in frame 0,1 or 2
+    if($p1==-1e6){#stop in frame 1
       $scoreN=$stop_n_score;
-      $scoreI=-1;
+      $scoreI=$stop_i_score;
     }
-    if($p2==-1e6){#stop in frame 0,1 or 2
+    if($p2==-1e6){#stop in frame 2
       $scoreN=$stop_n_score;
-      $scoreI=-1;
+      $scoreI=$stop_i_score;
     }
     printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI,$scoreI,$scoreI,substr($seq_fwd,$i,1);
     $pp0=$p0 if($p0 > -1e6);
