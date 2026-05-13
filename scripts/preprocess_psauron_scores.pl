@@ -145,7 +145,7 @@ for my $g(keys %genome_seqs){
     my $scoreI=1.-$scores_sorted[2];
     $scoreN=0.25-($scores_sorted[2]-$scores_sorted[1]) if($scores_sorted[2]>0);
 
-    my $stop_n_score=10;
+    my $stop_n_score=8;
     my $stop_i_score=-3;
 
     if($p0==-1e6){#stop in frame 0
