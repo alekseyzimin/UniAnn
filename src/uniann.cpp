@@ -309,16 +309,16 @@ void run_viterbi(
 
                     if ((to - 4) == (from - 1) && (len >= MIN_EXON || dp[i - 1][from].exon_from == 0)) {
                     // go into intron in the same frame
-                    cerr << "DEBUG at " << i
-                         << " trying transition " << state_name[from]
-                         << " " << state_name[to]
-                         << " score " << dp[i - 1][from].dp
-                         << " emit " << emit_log
-                         << " length " << len << "\n";
+                    //cerr << "DEBUG at " << i
+                    //     << " trying transition " << state_name[from]
+                    //     << " " << state_name[to]
+                    //     << " score " << dp[i - 1][from].dp
+                    //     << " emit " << emit_log
+                    //     << " length " << len << "\n";
                         log_t = gt_score[i - 1];
                     }
 
-                    cerr << "DEBUG GT probability " << log_t << "\n";
+                    //cerr << "DEBUG GT probability " << log_t << "\n";
                 }
 
                 //--------------------------------------------------------
@@ -334,12 +334,12 @@ void run_viterbi(
                         int f = from - 4; // intron frame 0,1,2
                         int e = to - 1;   // exon frame 0,1,2
                         int mod = len % 3;
-                        cerr << "DEBUG at " << i
-                         << " trying transition " << state_name[from]
-                         << " " << state_name[to]
-                         << " score " << dp[i - 1][from].dp
-                         << " emit " << emit_log
-                         << " length " << len << "\n";
+                        //cerr << "DEBUG at " << i
+                        // << " trying transition " << state_name[from]
+                        // << " " << state_name[to]
+                        // << " score " << dp[i - 1][from].dp
+                        // << " emit " << emit_log
+                        // << " length " << len << "\n";
 
                         // Frame‑compatible transitions
                         if ((f == 0 && e == 0) || (f == 1 && e == 1) || (f == 2 && e == 2)) {
@@ -353,7 +353,7 @@ void run_viterbi(
                         }
                     }
 
-                    cerr << "DEBUG AG probability " << log_t << "\n";
+                    //cerr << "DEBUG AG probability " << log_t << "\n";
                 }
 
                 //--------------------------------------------------------
@@ -363,19 +363,19 @@ void run_viterbi(
                     int len = dp[i - 1][from].exon_len - 2;
                     int frame = from - 1;
                     if (((i - 2) % 3) == frame) {
-                        cerr << "DEBUG at " << i
-                             << " trying transition " << state_name[from]
-                             << " " << state_name[to]
-                             << " origin "<< dp[i-1][from].exon_from
-                             << " score " << dp[i - 1][from].dp
-                             << " emission " << emit_log << "\n";
+                        //cerr << "DEBUG at " << i
+                        //     << " trying transition " << state_name[from]
+                        //     << " " << state_name[to]
+                        //     << " origin "<< dp[i-1][from].exon_from
+                        //     << " score " << dp[i - 1][from].dp
+                        //     << " emission " << emit_log << "\n";
                         if(is_intron(dp[i-1][from].exon_from) || (dp[i-1][from].exon_from == 0 && len > MIN_SINGLE)){ // if came from intron or came from noncoding and min length satisfied
                           log_t = 1.0; // max_log_prob
                         }else{
                           log_t = -1e3;
                         }
                     }
-                    cerr << "DEBUG STOP probability " << log_t << "\n";
+                    //cerr << "DEBUG STOP probability " << log_t << "\n";
                 }
 
                 //--------------------------------------------------------
@@ -391,11 +391,11 @@ void run_viterbi(
 
                         int frame = to - 1;
                         if (((i - 2) % 3) == frame) { //only in the right frame and if psauron score is positive in this frame
-                        cerr << "DEBUG at " << i
-                             << " trying transition " << state_name[from]
-                             << " " << state_name[to]
-                             << " score " << dp[i - 1][from].dp
-                             << " emission " << emit_log << "\n";
+                        //cerr << "DEBUG at " << i
+                        //     << " trying transition " << state_name[from]
+                        //     << " " << state_name[to]
+                        //     << " score " << dp[i - 1][from].dp
+                        //     << " emission " << emit_log << "\n";
 
                             if (i < 25) {
                               log_t = 1.0;
@@ -405,7 +405,7 @@ void run_viterbi(
                             }
                         }
 
-                        cerr << "DEBUG ATG probability " << log_t << "\n";
+                        //cerr << "DEBUG ATG probability " << log_t << "\n";
                     }
                 }
 
