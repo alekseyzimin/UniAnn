@@ -1,10 +1,8 @@
 #!/bin/bash
 
 FASTA="genome.fa"
-POS_PWM="genome.coding.pwm"
-NEG_PWM="genome.neg.pwm"
-START_PWM="genome.start.pwm"
-START_PWM="genome.stop.pwm"
+TRAINING_G="training_genome.fa"
+TRAINING_A="training_annotation.gff"
 PSAURON="psauron_score.csv"
 MIN_CDS=300
 MIN_SINGLE_CDS=400
@@ -38,13 +36,12 @@ function error_exit {
 
 function usage {
 echo "Usage:"
+echo "MUST HAVE out.gt.txt and out.ag.txt splice site score files in the folder!!!"
 echo "uniann.sh [arguments]"
 echo "-f file sith a single fasta sequence"
-echo "-s start PWM models"
-echo "-t stop PWM models"
-echo "-p positive PWM/WAM splice site models"
-echo "-n negative PWM/WAM splice site models"
-echo "-g psauron score file"
+echo "-g genome to train on"
+echo "-a annotation to train on"
+echo "-p psauron score file"
 }
 
 #parsing arguments
@@ -62,24 +59,16 @@ do
             FASTA="$2"
             shift
             ;;
-        -g|--psauron)
+        -p|--psauron)
             PSAURON="$2"
             shift
             ;;
-        -s|--start)
-            START_PWM="$2"
+        -a|--annotation)
+            TRAINING_A="$2"
             shift
             ;;
-        -t|--stop)
-            STOP_PWM="$2"
-            shift
-            ;;
-        -p|--pos)
-            POS_PWM="$2";
-            shift
-            ;;
-        -n|--neg)
-            NEG_PWM="$2";
+        -g|--genome)
+            TRAINING_G="$2"
             shift
             ;;
         -v|--verbose)
@@ -103,20 +92,14 @@ usage
 exit 1
 fi
 
-if [[ ! -s $POS_PWM ]];then
-echo "Input file of weights for positive model of splice sites $POS_PWM not found or not specified!"
+if [[ ! -s $TRAINING_G ]];then
+echo "Input training genome file $TRAINING_G not found or not specified!"
 usage
 exit 1
 fi
 
-if [[ ! -s $NEG_PWM ]];then
-echo "Input file of weights for negative model of splice sites $NEG_PWM not found or not specified!"
-usage
-exit 1
-fi
-
-if [[ ! -s $START_PWM ]];then
-echo "Input file of weights for model of start sites $START_PWM not found or not specified!"
+if [[ ! -s $TRAINING_A ]];then
+echo "Input training annotation file $TRAINING_A not found or not specified!"
 usage
 exit 1
 fi
@@ -135,11 +118,13 @@ log "Preprocessing psauron scores" && \
 $MYPATH/preprocess_psauron_scores.pl $FASTA $PSAURON && \
 #this produces out.atg.txt
 log "Scoring candidate start sites" && \
-$MYPATH/score_start_sites.pl $START_PWM < $FASTA && \
-$MYPATH/score_stop_sites.pl $STOP_PWM < $FASTA && \
+$MYPATH/compute_start_scores.pl $TRAINING_G $TRAINING_A > start.pwm && \
+$MYPATH/compute_stop_scores.pl $TRAINING_G $TRAINING_A > stop.pwm && \
+$MYPATH/score_start_sites.pl start.pwm < $FASTA && \
+$MYPATH/score_stop_sites.pl stop.pwm < $FASTA && \
 #this produces out.gt.txt and out.ag.txt
-log "Scoring candidate splice sites" && \
-$MYPATH/compute_markov_scores $FASTA $POS_PWM $NEG_PWM && \
+#log "Scoring candidate splice sites" && \
+#$MYPATH/compute_markov_scores $FASTA $POS_PWM $NEG_PWM && \
 log "Building gene models" && \
 $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>out.err| \
   tee >( perl -ane '{
@@ -150,8 +135,8 @@ $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 
             @f=split(/\t/,$lines[$i]);
             @ff=split(/\t/,$lines[$i+1]);
             if($prev eq "region" && $f[2] eq "CDS" && $ff[2] eq "region"){
-            #AVERAGE SCORE MUCT BE ABOVE .5 FOR SINGLE EXON
-              print $lines[$i] if($f[5]>0.5);
+            #AVERAGE SCORE MUST BE ABOVE .75 FOR SINGLE EXON
+              print $lines[$i] if($f[5]>0.75);
             }else{
               print $lines[$i] unless($f[2] =~ /region|intron/);
             }
