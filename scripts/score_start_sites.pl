@@ -84,7 +84,6 @@ while(my $line=<STDIN>){
   } 
 }   
 $genome_seqs{$scf}=$seq if(not($scf eq ""));
-#$start_length=60 if($start_length > 60);
 print "DEBUG start pattern length = $start_length\n";
 open(FILEATG,">out.atg.txt");
 for my $g(keys %genome_seqs){
@@ -99,7 +98,7 @@ for my $g(keys %genome_seqs){
     #ATG position fixed on the start seq
     my $start_seq=substr($seq_fwd,$pos-19,$start_length);
     my $start_hmm2_score=0;
-    
+    #print "DEBUG $start_seq\n";
     for(my $i=0;$i<($start_length-2);$i++){
       $start_hmm2_score+=$start_hmm2_freq[$i][$code3{substr($start_seq,$i,3)}] if(defined($code3{substr($start_seq,$i,3)}));
     }
