@@ -147,7 +147,8 @@ void safety_check_gt_ag_atg(
     const vector<char> &seq,
     const vector<double> &gt_score,
     const vector<double> &ag_score,
-    const vector<double> &atg_score
+    const vector<double> &atg_score,
+    const vector<double> &stop_score
 ) {
     int L = seq.size();
     for (int pos = 0; pos < L - 1; pos++) {
@@ -186,6 +187,17 @@ void safety_check_gt_ag_atg(
             }
         }
 
+        // Check STOP
+        if (stop_score[pos] > -1e8) {
+            string trinuc;
+            trinuc.push_back(toupper(seq[pos]));
+            trinuc.push_back(toupper(seq[pos + 1]));
+            trinuc.push_back(toupper(seq[pos + 2]));
+            if (trinuc != "TAG"  && trinuc != "TGA" && trinuc != "TAA") {
+                cerr << "WARNING: STOP score at position "
+                     << pos << " but sequence has " << trinuc << "\n";
+            }
+        }
     }
 }
 
@@ -255,6 +267,7 @@ void run_viterbi(
     const vector<double> &gt_score,
     const vector<double> &ag_score,
     const vector<double> &atg_score,
+    const vector<double> &stop_score,
     const vector<char> &seq,
     const vector<vector<double>> &trans
 ) {
@@ -370,7 +383,7 @@ void run_viterbi(
                         //     << " score " << dp[i - 1][from].dp
                         //     << " emission " << emit_log << "\n";
                         if(is_intron(dp[i-1][from].exon_from) || (dp[i-1][from].exon_from == 0 && len > MIN_SINGLE)){ // if came from intron or came from noncoding and min length satisfied
-                          log_t = 1.0; // max_log_prob
+                          log_t = stop_score[i - 2]; 
                         }else{
                           log_t = -1e3;
                         }
@@ -670,6 +683,7 @@ int main(int argc, char** argv) {
     string f_gt    = argv[3];
     string f_ag    = argv[4];
     string f_atg   = argv[5];
+    string f_stop   = argv[6];
 
     //--------------------------------------------------------
     // Load FASTA
@@ -688,11 +702,12 @@ int main(int argc, char** argv) {
     auto gt_score =  load_sparse_scores(f_gt, L);
     auto ag_score =  load_sparse_scores(f_ag, L);
     auto atg_score = load_sparse_scores(f_atg, L);
+    auto stop_score = load_sparse_scores(f_stop, L);
 
     //--------------------------------------------------------
     // Safety check: GT/AG coordinates match sequence
     //--------------------------------------------------------
-    safety_check_gt_ag_atg(seq, gt_score, ag_score, atg_score);
+    safety_check_gt_ag_atg(seq, gt_score, ag_score, atg_score, stop_score);
 
     //--------------------------------------------------------
     // Initialize transitions
@@ -707,7 +722,7 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------
     // Run full Viterbi
     //--------------------------------------------------------
-    run_viterbi(dp, emit, gt_score, ag_score, atg_score, seq, trans);
+    run_viterbi(dp, emit, gt_score, ag_score, atg_score, stop_score, seq, trans);
 
     //print DP and BT matrices
     for (int i = 0; i < L; i++) {

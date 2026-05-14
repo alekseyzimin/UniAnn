@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 #
 my $model_file=$ARGV[0];
-my $start_length=0;
+my $stop_length=0;
 my @narray=("A","C","G","T");
 #initialize code hashes
 $n=0;
@@ -34,11 +34,11 @@ if(-e $model_file){
           $line=~s/^\s+//;
           my @f=split(/\s+/,$line);
           for(my $j=0;$j<4;$j++){
-            $start_freq[$i][$j]=$f[$j];
+            $stop_freq[$i][$j]=$f[$j];
           }
           $i++;
         }
-        $start_length=$i;
+        $stop_length=$i;
       }elsif($line=~/^ATG 1HMM/){
         my $i=0;
         while($line=<FILE>){
@@ -47,7 +47,7 @@ if(-e $model_file){
           $line=~s/^\s+//;
           my @f=split(/\s+/,$line);
           for(my $j=0;$j<16;$j++){
-            $start_hmm_freq[$i][$j]=$f[$j];
+            $stop_hmm_freq[$i][$j]=$f[$j];
           }
           $i++;
         }
@@ -59,7 +59,7 @@ if(-e $model_file){
           $line=~s/^\s+//;
           my @f=split(/\s+/,$line);
           for(my $j=0;$j<64;$j++){
-            $start_hmm2_freq[$i][$j]=$f[$j];
+            $stop_hmm2_freq[$i][$j]=$f[$j];
           }
           $i++;
         }
@@ -84,27 +84,27 @@ while(my $line=<STDIN>){
   } 
 }   
 $genome_seqs{$scf}=$seq if(not($scf eq ""));
-print "DEBUG start pattern length = $start_length\n";
-open(FILEATG,">out.atg.txt");
+print "DEBUG stop pattern length = $stop_length\n";
+open(FILESTOP,">out.stop.txt");
 for my $g(keys %genome_seqs){
   #only doing forward for now!!!
   my $seq_fwd=uc($genome_seqs{$g});
-  my @start_fwd_pos=();
-  #find starts fwd
-  while ($seq_fwd =~ /ATG/g) {
-    push @start_fwd_pos, pos($seq_fwd) - 3 if(pos($seq_fwd)>$start_length-2);  # subtract length of "ATG" (2) to get start index
+  my @stop_fwd_pos=();
+  #find stops fwd
+  while ($seq_fwd =~ /TAA|TAG|TGA/g) {
+    push @stop_fwd_pos, pos($seq_fwd) - 3 if(pos($seq_fwd)>$stop_length-2);  # subtract length of "ATG" (2) to get stop index
   }
-  for $pos(@start_fwd_pos){
-    #ATG position fixed on the start seq
-    my $start_seq=substr($seq_fwd,$pos-19,$start_length);
-    my $start_hmm2_score=0;
-    #print "DEBUG $start_seq\n";
-    for(my $i=0;$i<($start_length-2);$i++){
-      $start_hmm2_score+=$start_hmm2_freq[$i][$code3{substr($start_seq,$i,3)}] if(defined($code3{substr($start_seq,$i,3)}));
+  for $pos(@stop_fwd_pos){
+    #ATG position fixed on the stop seq
+    my $stop_seq=substr($seq_fwd,$pos-19,$stop_length);
+    my $stop_hmm2_score=0;
+    #print "DEBUG $stop_seq\n";
+    for(my $i=0;$i<($stop_length-2);$i++){
+      $stop_hmm2_score+=$stop_hmm2_freq[$i][$code3{substr($stop_seq,$i,3)}] if(defined($code3{substr($stop_seq,$i,3)}));
     }
-    $start_hmm2_score+=$start_hmm_freq[0][$code2{substr($start_seq,0,2)}] if(defined($code2{substr($start_seq,0,2)}));
-    $start_hmm2_score=-1000 if($start_hmm2_score<13);
-    print FILEATG "$pos\t",$start_hmm2_score,"\n";
+    $stop_hmm2_score+=$stop_hmm_freq[0][$code2{substr($stop_seq,0,2)}] if(defined($code2{substr($stop_seq,0,2)}));
+    $stop_hmm2_score=-1000 if($stop_hmm2_score<13);
+    print FILESTOP "$pos\t",$stop_hmm2_score,"\n";
   }
 }
 
