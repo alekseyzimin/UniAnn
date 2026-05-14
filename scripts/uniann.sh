@@ -4,6 +4,7 @@ FASTA="genome.fa"
 POS_PWM="genome.coding.pwm"
 NEG_PWM="genome.neg.pwm"
 START_PWM="genome.start.pwm"
+START_PWM="genome.stop.pwm"
 PSAURON="psauron_score.csv"
 MIN_CDS=300
 MIN_SINGLE_CDS=400
@@ -40,6 +41,7 @@ echo "Usage:"
 echo "uniann.sh [arguments]"
 echo "-f file sith a single fasta sequence"
 echo "-s start PWM models"
+echo "-t stop PWM models"
 echo "-p positive PWM/WAM splice site models"
 echo "-n negative PWM/WAM splice site models"
 echo "-g psauron score file"
@@ -66,6 +68,10 @@ do
             ;;
         -s|--start)
             START_PWM="$2"
+            shift
+            ;;
+        -t|--stop)
+            STOP_PWM="$2"
             shift
             ;;
         -p|--pos)
@@ -130,11 +136,12 @@ $MYPATH/preprocess_psauron_scores.pl $FASTA $PSAURON && \
 #this produces out.atg.txt
 log "Scoring candidate start sites" && \
 $MYPATH/score_start_sites.pl $START_PWM < $FASTA && \
+$MYPATH/score_stop_sites.pl $STOP_PWM < $FASTA && \
 #this produces out.gt.txt and out.ag.txt
 log "Scoring candidate splice sites" && \
 $MYPATH/compute_markov_scores $FASTA $POS_PWM $NEG_PWM && \
 log "Building gene models" && \
-$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt 2>out.err| \
+$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>out.err| \
   tee >( perl -ane '{
           push @lines,$_;
         }END{
