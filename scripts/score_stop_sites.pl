@@ -103,7 +103,7 @@ for my $g(keys %genome_seqs){
       $stop_hmm2_score+=$stop_hmm2_freq[$i][$code3{substr($stop_seq,$i,3)}] if(defined($code3{substr($stop_seq,$i,3)}));
     }
     $stop_hmm2_score+=$stop_hmm_freq[0][$code2{substr($stop_seq,0,2)}] if(defined($code2{substr($stop_seq,0,2)}));
-    $stop_hmm2_score=-1000 if($stop_hmm2_score<7);
+    $stop_hmm2_score-=500 if($stop_hmm2_score<7);
     print FILESTOP "$pos\t",$stop_hmm2_score,"\n";
   }
 }
