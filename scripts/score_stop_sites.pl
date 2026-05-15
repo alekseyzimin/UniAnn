@@ -84,7 +84,6 @@ while(my $line=<STDIN>){
   } 
 }   
 $genome_seqs{$scf}=$seq if(not($scf eq ""));
-$stop_length=30;
 print "DEBUG stop pattern length = $stop_length\n";
 open(FILESTOP,">out.stop.txt");
 for my $g(keys %genome_seqs){

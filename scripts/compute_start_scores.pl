@@ -28,7 +28,7 @@ while($line=<FILE>){
   chomp($line);
   if($line =~/^>/){
     if($start>-1){
-      push(@seqs,uc(substr($seq,$start-20,$start_length))) if(length(substr($seq,$start-20,$start_length))==$start_length);
+      push(@seqs,uc(substr($seq,$start-20,$start_length))) if($start>=20);
     }
     $seq="";
     if($line=~/\sCDS=(\d+)-(\d+)\s/){

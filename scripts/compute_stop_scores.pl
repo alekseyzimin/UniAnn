@@ -18,61 +18,61 @@ for($i=0;$i<4;$i++){
   }
 }
 
-my $start_length=40;
+my $stop_length=30;
 my $fasta=$ARGV[0];
 my $gff=$ARGV[1];
 my $seq="";
-my $start=-1;
+my $stop=-1;
 open (FILE,"gffread -W -w /dev/stdout -g $fasta $gff |");
 while($line=<FILE>){
   chomp($line);
   if($line =~/^>/){
-    if($start>-1){
-      push(@seqs,uc(substr($seq,$start-20,$start_length))) if(length(substr($seq,$start-20,$start_length))==$start_length);
+    if($stop>-1){
+      push(@seqs,uc(substr($seq,$stop-20,$stop_length))) if(length($seq)>=$stop-20+$stop_length);
     }
     $seq="";
     if($line=~/\sCDS=(\d+)-(\d+)\s/){
-      $start=$2-2;
+      $stop=$2-2;
     }else{
-      $start=-1;
+      $stop=-1;
     }
   }else{
     $seq.=$line;
   }
 }
 
-foreach $start_seq (@seqs){
- #print "Training: $start_seq\n";
- for(my $i=0;$i<$start_length;$i++) {$start_pwm[$i][$code{substr($start_seq,$i,1)}]++ if(defined($code{substr($start_seq,$i,1)}));}
- for(my $i=0;$i<($start_length-1);$i++) {$start2_pwm[$i][$code2{substr($start_seq,$i,2)}]++ if(defined($code2{substr($start_seq,$i,2)}));}
- for(my $i=0;$i<($start_length-2);$i++) {$start3_pwm[$i][$code3{substr($start_seq,$i,3)}]++ if(defined($code3{substr($start_seq,$i,3)}));}
+foreach $stop_seq (@seqs){
+ #print "Training: $stop_seq\n";
+ for(my $i=0;$i<$stop_length;$i++) {$stop_pwm[$i][$code{substr($stop_seq,$i,1)}]++ if(defined($code{substr($stop_seq,$i,1)}));}
+ for(my $i=0;$i<($stop_length-1);$i++) {$stop2_pwm[$i][$code2{substr($stop_seq,$i,2)}]++ if(defined($code2{substr($stop_seq,$i,2)}));}
+ for(my $i=0;$i<($stop_length-2);$i++) {$stop3_pwm[$i][$code3{substr($stop_seq,$i,3)}]++ if(defined($code3{substr($stop_seq,$i,3)}));}
  $w++;
 }
 
 my $score_floor_value=1e-10;
 print "zoeHMM\n";
 print "ATG 0HMM\n";
-for(my $i=0;$i<$start_length;$i++){
+for(my $i=0;$i<$stop_length;$i++){
   for(my $j=0;$j<4;$j++){
-    printf("%.3f ", log($start_pwm[$i][$j]/$w*4+$score_floor_value));
+    printf("%.3f ", log($stop_pwm[$i][$j]/$w*4+$score_floor_value));
   }
   print "\n";
 }
 print "NNN TRM\n";
 
 print "ATG 1HMM\n";
-for(my $i=0;$i<$start_length-1;$i++){
+for(my $i=0;$i<$stop_length-1;$i++){
   for(my $j=0;$j<16;$j++){
-    printf("%.3f ", log($start2_pwm[$i][$j]/$w*16+$score_floor_value));
+    printf("%.3f ", log($stop2_pwm[$i][$j]/$w*16+$score_floor_value));
   }
   print "\n";
 } 
 print "NNN TRM\n";
 
 print "ATG 2HMM\n";
-for(my $i=0;$i<$start_length-2;$i++){
+for(my $i=0;$i<$stop_length-2;$i++){
   for(my $j=0;$j<64;$j++){
-    printf("%.3f ", log($start3_pwm[$i][$j]/$w*64+$score_floor_value));
+    printf("%.3f ", log($stop3_pwm[$i][$j]/$w*64+$score_floor_value));
   }
   print "\n";
 } 
