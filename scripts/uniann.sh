@@ -4,8 +4,8 @@ FASTA="genome.fa"
 TRAINING_G="training_genome.fa"
 TRAINING_A="training_annotation.gff"
 PSAURON="psauron_score.csv"
-MIN_CDS=300
-MIN_SINGLE_CDS=400
+MIN_CDS=200
+MIN_SINGLE_CDS=300
 
 GC=
 RC=
