@@ -26,7 +26,7 @@ static const double NEG_INF = -1e9;
 static const int MIN_INTRON = 30;
 static const int MIN_EXON   = 30;
 static const int MIN_INTER  = 200;
-static const int MIN_SINGLE = 200;
+static const int MIN_SINGLE = 100;
 
 //------------------------------------------------------------
 // Helpers
