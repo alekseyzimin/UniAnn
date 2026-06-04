@@ -55,7 +55,7 @@ for my $g(keys %genome_seqs){
   @psauron_frame1=split(/;/,$psauron_scores_1f{$g});
   @psauron_frame2=split(/;/,$psauron_scores_2f{$g});
    
-  my $mult=40;
+  my $mult=50;
   my $lmult=log($mult);
   #my $off=0.2;
   $_ = log($_*$mult+1e-6)/$lmult for @psauron_frame0;
