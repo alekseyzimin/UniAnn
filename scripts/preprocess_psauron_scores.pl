@@ -128,22 +128,11 @@ for my $g(keys %genome_seqs){
       $p2=$pp2 if($p2==-1e6);
     }
     
-    #my $min_diff=0.5;
     my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
-    #if($scores_sorted[2]-$scores_sorted[1]>$min_diff && $scores_sorted[2]>0){
-    #  $p0+=1-$scores_sorted[2] if($p0>-1e6 && $scores_sorted[2]>0);
-    #  $p1+=1-$scores_sorted[2] if($p1>-1e6 && $scores_sorted[2]>0);
-    #  $p2+=1-$scores_sorted[2] if($p2>-1e6 && $scores_sorted[2]>0);
-    #  $scores_sorted[2]=1;
-    #}else{
-    #  $p0-=$scores_sorted[1] if($p0>-1e6 && $scores_sorted[1]>0);
-    #  $p1-=$scores_sorted[1] if($p1>-1e6 && $scores_sorted[1]>0);
-    #  $p2-=$scores_sorted[1] if($p2>-1e6 && $scores_sorted[1]>0);
-    #}
     
     my $scoreN=4;
     my $scoreI=1.-$scores_sorted[2];
-    $scoreN=0.25-($scores_sorted[2]-$scores_sorted[1]) if($scores_sorted[2]>0);
+    $scoreN=0.15-($scores_sorted[2]-$scores_sorted[1]) if($scores_sorted[2]>0);
 
     my $stop_n_score=8;
     my $stop_i_score=-2;
