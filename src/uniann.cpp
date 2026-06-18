@@ -154,47 +154,47 @@ void safety_check_gt_ag_atg(
     for (int pos = 0; pos < L - 1; pos++) {
 
         // Check GT
-        if (gt_score[pos] > -1e8) {
+        if (gt_score[pos] > NEG_INF) {
             string dinuc;
             dinuc.push_back(toupper(seq[pos]));
             dinuc.push_back(toupper(seq[pos + 1]));
             if (dinuc != "GT") {
-                cerr << "WARNING: GT score at position "
+                cerr << "WARNING: GT score "<< gt_score[pos] << " at position "
                      << pos << " but sequence has " << dinuc << "\n";
             }
         }
 
         // Check AG
-        if (ag_score[pos] > -1e8) {
+        if (ag_score[pos] > NEG_INF) {
             string dinuc;
             dinuc.push_back(toupper(seq[pos]));
             dinuc.push_back(toupper(seq[pos + 1]));
             if (dinuc != "AG") {
-                cerr << "WARNING: AG score at position "
+                cerr << "WARNING: AG score "<< ag_score[pos] << " at position "
                      << pos << " but sequence has " << dinuc << "\n";
             }
         }
 
         // Check ATG
-        if (atg_score[pos] > -1e8) {
+        if (atg_score[pos] > NEG_INF) {
             string trinuc;
             trinuc.push_back(toupper(seq[pos]));
             trinuc.push_back(toupper(seq[pos + 1]));
             trinuc.push_back(toupper(seq[pos + 2]));
             if (trinuc != "ATG") {
-                cerr << "WARNING: ATG score at position "
+                cerr << "WARNING: ATG score "<< atg_score[pos] << " at position "
                      << pos << " but sequence has " << trinuc << "\n";
             }
         }
 
         // Check STOP
-        if (stop_score[pos] > -1e8) {
+        if (stop_score[pos] > NEG_INF) {
             string trinuc;
             trinuc.push_back(toupper(seq[pos]));
             trinuc.push_back(toupper(seq[pos + 1]));
             trinuc.push_back(toupper(seq[pos + 2]));
             if (trinuc != "TAG"  && trinuc != "TGA" && trinuc != "TAA") {
-                cerr << "WARNING: STOP score at position "
+                cerr << "WARNING: STOP score "<< stop_score[pos] << " at position "
                      << pos << " but sequence has " << trinuc << "\n";
             }
         }
