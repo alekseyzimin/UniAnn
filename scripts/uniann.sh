@@ -1,4 +1,6 @@
 #!/bin/bash
+MYPATH="`dirname \"$0\"`"
+MYPATH="`( cd \"$MYPATH\" && pwd )`"
 
 FASTA="genome.fa"
 PSAURON="psauron_score.csv"
@@ -101,21 +103,17 @@ usage
 exit 1
 fi
 
-MYPATH="`dirname \"$0\"`"
-MYPATH="`( cd \"$MYPATH\" && pwd )`"
-
 #this produces out.ps.txt
 log "Preprocessing inputs" && \
 if [ ! -s out.ps.txt ];then
   $MYPATH/preprocess_psauron_scores.pl $FASTA $PSAURON
 fi
 
-MULT=`perl -e 'print exp(1)'`
-FACTOR=`cat $SCOREFILE |perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}'|perl -ane 'BEGIN{$max_score=0}{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10);$max_score=$score if($score>$max_score);}}END{die("Incorrect scores in the input file: must be between 0 and 1!") if($max_score<=0);print 1000/$max_score}'` && \
+FACTOR=`cat $SCOREFILE |perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}'|perl -ane 'BEGIN{$max_score=0}{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10);$max_score=$score if($score>$max_score);}}END{die("Incorrect scores in the input file: must be between 0 and 1!") if($max_score<=0);print 900/$max_score}'` && \
 log "Multiplier is $MULT, FACTOR is $FACTOR" && \
 #this produces out.atg.txt out.gt.txt and out.ag.txt out.stop
 cat $SCOREFILE | \
-  perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}' | \
+  perl -ane '{$F[5]=$F[-1] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}' | \
   tee >(perl -ane '{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.gt.txt) |\
   tee >(perl -ane '{if($F[3] eq "acceptor"){$score=log($F[5]*'$MULT'+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.ag.txt) |\
   tee >(perl -ane '{if($F[3] eq "start"){$score=log($F[5]*('$MULT')+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.atg.txt) | \
