@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
-my $stop_value=-1e6;
+my $stop_value=0;
+my $stop_log_value=log(1e-10);
 
 #usage on empty
 unless(defined($ARGV[0]) && defined($ARGV[1])){
@@ -55,15 +56,6 @@ for my $g(keys %genome_seqs){
   @psauron_frame1=split(/;/,$psauron_scores_1f{$g});
   @psauron_frame2=split(/;/,$psauron_scores_2f{$g});
    
-  my $mult=50;
-  my $lmult=log($mult);
-  #my $off=0.2;
-  $_ = log($_*$mult+1e-6)/$lmult for @psauron_frame0;
-  $_ = log($_*$mult+1e-6)/$lmult for @psauron_frame1;
-  $_ = log($_*$mult+1e-6)/$lmult for @psauron_frame2;
-
-  $now=localtime();
-  print "DEBUG $now: log transform done for $g\n";
   my $j=0;
   
   #find all stops and insert large negative score for an in frame stop 
@@ -101,16 +93,12 @@ for my $g(keys %genome_seqs){
   @psauron_frame2_wstops=insert_before_positions(\@psauron_frame2,\%stops_f2);
   $now=localtime();
   print "DEBUG $now: stops inserted for $g\n";
-  #replace scores by averages between the stops
-  #@psauron_frame0_ave=average_between_stops(\@psauron_frame0);
-  #@psauron_frame1_ave=average_between_stops(\@psauron_frame1);
-  #@psauron_frame2_ave=average_between_stops(\@psauron_frame2);
       
   my ($p0,$p1,$p2)=(0,0,0);
   my ($pp0,$pp1,$pp2)=(0,0,0);
   for(my $i=0;$i<length($seq_fwd);$i++){
     if(not(substr($seq_fwd,$i,1) =~ /A|C|G|T|a|c|g|t/)){
-      printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,0,$stop_value,$stop_value,$stop_value,0,0,0,substr($seq_fwd,$i,1);
+      printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,0,$stop_log_value,$stop_log_value,$stop_log_value,0,0,0,substr($seq_fwd,$i,1);
       next;
     }
     ($p0,$p1,$p2)=(0,0,0);
@@ -130,12 +118,12 @@ for my $g(keys %genome_seqs){
     
     my @scores_sorted= sort {$a<=>$b} ($p0,$p1,$p2);
     
-    my $scoreN=4;
-    my $scoreI=1.-$scores_sorted[2];
-    $scoreN=0.15-($scores_sorted[2]-$scores_sorted[1]) if($scores_sorted[2]>0);
+    my $scoreN=log(0.5);
+    my $scoreI=log(1.-$scores_sorted[2]+1e-2);
+    $scoreN=log(1.-($scores_sorted[2]-$scores_sorted[1])+1e-2) if($scores_sorted[2]>0.5);
 
-    my $stop_n_score=8;
-    my $stop_i_score=-2;
+    my $stop_n_score=0;
+    my $stop_i_score=-1;
 
     if($p0==$stop_value){#stop in frame 0
       $scoreN=$stop_n_score;
@@ -149,7 +137,8 @@ for my $g(keys %genome_seqs){
       $scoreN=$stop_n_score;
       $scoreI=$stop_i_score;
     }
-    printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI,$scoreI,$scoreI,substr($seq_fwd,$i,1);
+    my $factor=0.001;
+    printf FILEPS "%d\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%.5f\t%s\n",$i,$scoreN*$factor,log($p0+1e-10)*$factor,log($p1+1e-10)*$factor,log($p2+1e-10)*$factor,$scoreI*$factor,$scoreI*$factor,$scoreI*$factor,substr($seq_fwd,$i,1);
     $pp0=$p0 if($p0 > $stop_value);
     $pp1=$p1 if($p1 > $stop_value);
     $pp2=$p2 if($p2 > $stop_value);
@@ -227,7 +216,7 @@ sub insert_before_positions {
 
         if(exists $ins{$i}) {
           for(my $j=0;$j<$ins{$i};$j++){
-            push @out, $stop_value;
+            push @out, 0;
           }
         }
 
