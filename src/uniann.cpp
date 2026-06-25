@@ -600,9 +600,10 @@ void write_gff_feature(
 
     // Perl rounds best_final to 2 decimals
     double bf = floor(best_final * 100.0) / 100.0;
-
-    cout << seqid << "\t"
-         << "HMM" << "\t"
+    
+    if(type != "region")
+      cout << seqid << "\t"
+         << "UniAnn" << "\t"
          << type << "\t"
          << start << "\t"
          << end << "\t"
