@@ -230,11 +230,11 @@ vector<vector<double>> init_transitions() {
 //------------------------------------------------------------
 struct DPCell {
     double dp;
-    int bt;
+    short int bt;
     int intron_len;
     int exon_len;
     int inter_len;
-    int exon_from;
+    short int exon_from;
 };
 
 vector<vector<DPCell>> init_dp(int L,
