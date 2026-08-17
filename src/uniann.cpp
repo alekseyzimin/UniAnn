@@ -247,7 +247,7 @@ struct DPCell {
 };
 
 vector<vector<DPCell>> init_dp(int L,
-                               const vector<array<double, NUM_STATES>> &emit)
+                               const vector<array<double, NUM_E_STATES>> &emit)
 {
     vector<vector<DPCell>> dp(L, vector<DPCell>(NUM_STATES));
 
@@ -272,7 +272,7 @@ vector<vector<DPCell>> init_dp(int L,
 //------------------------------------------------------------
 void run_viterbi(
     vector<vector<DPCell>> &dp,
-    const vector<array<double, NUM_STATES>> &emit,
+    const vector<array<double, NUM_E_STATES>> &emit,
     const vector<double> &gt_score,
     const vector<double> &ag_score,
     const vector<double> &atg_score,
