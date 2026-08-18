@@ -6,6 +6,7 @@ FASTA="genome.fa"
 PSAURON="psauron_score.csv"
 SCOREFILE="scores.txt"
 MULT=`perl -e 'print exp(1)'`
+VITERBI=1
 
 GC=
 RC=
@@ -41,6 +42,7 @@ echo "-f file sith a single fasta sequence"
 echo "-m multiplier to rescale probabilities before applying log, must be a number between 1 and 100, default: exp(1)"
 echo "-s file with AI-derived scores"
 echo "-p psauron score file"
+echo "-n (flag) do not save Viterbi matrix in out.err"
 }
 
 #parsing arguments
@@ -64,6 +66,10 @@ do
             ;;
         -m|--mult)
             MULT="$2"
+            shift
+            ;;
+        -n|--noviterbi)
+            VITERBI=0
             shift
             ;;
         -s|--scores)
@@ -120,7 +126,12 @@ cat $SCOREFILE | \
   perl -ane '{if($F[3] eq "stop"){$score=log($F[5]*('$MULT')+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.stop.txt && \
 
 log "Building gene models" && \
-$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>out.err |\
-  gffread -F > $FASTA.gff.tmp && \
-mv $FASTA.gff.tmp $FASTA.uniann.gff && \
+if [ $VITERBI -lt 1 ];then
+  $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>/dev/null|gffread -F > $FASTA.gff.tmp && \
+  mv $FASTA.gff.tmp $FASTA.uniann.gff
+else
+  $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>out.err|gffread -F > $FASTA.gff.tmp && \
+  mv $FASTA.gff.tmp $FASTA.uniann.gff
+fi 
+
 echo "Output gff file is $FASTA.uniann.gff"
