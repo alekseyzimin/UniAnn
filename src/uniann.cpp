@@ -17,7 +17,6 @@ using namespace std;
 //------------------------------------------------------------
 
 static const int NUM_STATES = 7;
-static const int NUM_E_STATES = 5;
 
 static const array<string, NUM_STATES> state_name = {
     "N", "E0", "E1", "E2", "I0", "I1", "I2"
@@ -33,11 +32,11 @@ static const int MIN_SINGLE = 100;
 // Helpers
 //------------------------------------------------------------
 
-inline bool is_exon(short int s) {
+inline bool is_exon(int s) {
     return (s == 1 || s == 2 || s == 3);
 }
 
-inline bool is_intron(short int s) {
+inline bool is_intron(int s) {
     return (s == 4 || s == 5 || s == 6);
 }
 
@@ -49,14 +48,6 @@ inline bool is_label_intron(string s) {
     return (s == "I0" || s == "I1" || s == "I2");
 }
 
-short int emit_state(short int s) {
-  if(s > 4){
-    return(4);
-  }else{
-    return s;
-  }
-}
-  
 
 //------------------------------------------------------------
 // Read FASTA (single sequence)
@@ -81,10 +72,10 @@ string read_fasta(const string &file) {
 //------------------------------------------------------------
 // Load emissions: pos \t 7 values
 //------------------------------------------------------------
-vector<array<double, NUM_E_STATES>> load_emissions(const string &file, int L) {
-    vector<array<double, NUM_E_STATES>> emit(L);
+vector<array<double, NUM_STATES>> load_emissions(const string &file, int L) {
+    vector<array<double, NUM_STATES>> emit(L);
     for (int i = 0; i < L; i++)
-        for (int s = 0; s < NUM_E_STATES; s++)
+        for (int s = 0; s < NUM_STATES; s++)
             emit[i][s] = NEG_INF;
 
     ifstream in(file);
@@ -99,9 +90,11 @@ vector<array<double, NUM_E_STATES>> load_emissions(const string &file, int L) {
         stringstream ss(line);
         int pos;
         ss >> pos;
-        for (int s = 0; s < NUM_E_STATES; s++) {
+        for (int s = 0; s < NUM_STATES-2; s++) {
             ss >> emit[pos][s];
         }
+        emit[pos][5]=emit[pos][4];
+        emit[pos][6]=emit[pos][4];
     }
     return emit;
 }
@@ -247,14 +240,14 @@ struct DPCell {
 };
 
 vector<vector<DPCell>> init_dp(int L,
-                               const vector<array<double, NUM_E_STATES>> &emit)
+                               const vector<array<double, NUM_STATES>> &emit)
 {
     vector<vector<DPCell>> dp(L, vector<DPCell>(NUM_STATES));
 
     // Initialization at position 0 — force start in N
     for (int s = 0; s < NUM_STATES; s++) {
         double start_prob = (s == 0 ? 0.0 : NEG_INF);
-        double e = emit[0][emit_state(s)];
+        double e = emit[0][s];
 
         dp[0][s].dp = start_prob + e;
         dp[0][s].bt = -1;
@@ -272,7 +265,7 @@ vector<vector<DPCell>> init_dp(int L,
 //------------------------------------------------------------
 void run_viterbi(
     vector<vector<DPCell>> &dp,
-    const vector<array<double, NUM_E_STATES>> &emit,
+    const vector<array<double, NUM_STATES>> &emit,
     const vector<double> &gt_score,
     const vector<double> &ag_score,
     const vector<double> &atg_score,
@@ -286,8 +279,6 @@ void run_viterbi(
         char b_prev = seq[i - 1];
         char b      = seq[i];
         bool is_stop = false;
-        if(i % 10000000 ==0)
-          cerr << "# " << i << " of " << L << " bases done\n";
 
         // on stop do not allow to continue in the same exon
         if ( i >= 2 ) {
@@ -301,11 +292,11 @@ void run_viterbi(
         }
 
         for (int to = 0; to < NUM_STATES; to++) {
-            double emit_log = emit[i][emit_state(to)];
+            double emit_log = emit[i][to];
 
             // Fix for TAG stop where AG is acceptor
             if (emit_log <= -1e6 && toupper(b_prev) == 'A' && toupper(b) == 'G' && i + 1 < L) {
-                emit_log = emit[i + 1][emit_state(to)];
+                emit_log = emit[i + 1][to];
             }
 
             double best = -1e18;
@@ -508,7 +499,7 @@ pair<double, int> viterbi_termination(
     int L
 ) {
     double best_final = -1e18;
-    short int best_state = -1;
+    int best_state = -1;
 
     for (int s = 0; s < NUM_STATES; s++) {
         if (dp[L - 1][s].dp > best_final) {
@@ -522,15 +513,15 @@ pair<double, int> viterbi_termination(
 //------------------------------------------------------------
 // Backtrace: reconstruct optimal path
 //------------------------------------------------------------
-vector<short int> viterbi_backtrace(
+vector<int> viterbi_backtrace(
     const vector<vector<DPCell>> &dp,
     int L,
-    short int best_state
+    int best_state
 ) {
-    vector<short int> path_states(L);
-    short int cur = best_state;
+    vector<int> path_states(L);
+    int cur = best_state;
 
-    for (short int i = L - 1; i >= 0; i--) {
+    for (int i = L - 1; i >= 0; i--) {
         path_states[i] = cur;
         cur = dp[i][cur].bt;
         if (cur < 0) break;
@@ -544,10 +535,10 @@ vector<short int> viterbi_backtrace(
 vector<double> viterbi_backtrace_scores(
     const vector<vector<DPCell>> &dp,
     int L,
-    short int best_state
+    int best_state
 ) {
     vector<double> path_scores(L);
-    short int cur = best_state;
+    int cur = best_state;
 
     for (int i = L - 1; i >= 0; i--) {
         path_scores[i] = dp[i][cur].dp;
@@ -560,7 +551,7 @@ vector<double> viterbi_backtrace_scores(
 //------------------------------------------------------------
 // Convert state numbers to labels
 //------------------------------------------------------------
-vector<string> states_to_labels(const vector<short int> &path_states) {
+vector<string> states_to_labels(const vector<int> &path_states) {
     vector<string> labels(path_states.size());
     for (size_t i = 0; i < path_states.size(); i++) {
         labels[i] = state_name[path_states[i]];
