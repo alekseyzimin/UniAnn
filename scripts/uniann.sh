@@ -6,8 +6,8 @@ FASTA="genome.fa"
 PSAURON="psauron_score.csv"
 SCOREFILE="scores.txt"
 MULT=`perl -e 'print exp(1)'`
-VITERBI=1
-MIN_SINGLE_CDS=200
+OUTDEV="out.err"
+MIN_CDS=200
 
 GC=
 RC=
@@ -70,7 +70,7 @@ do
             shift
             ;;
         -n|--noviterbi)
-            VITERBI=0
+            OUTDEV="/dev/null"
             shift
             ;;
         -s|--scores)
@@ -127,19 +127,22 @@ cat $SCOREFILE | \
   perl -ane '{if($F[3] eq "stop"){$score=log($F[5]*('$MULT')+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.stop.txt && \
 
 log "Building gene models" && \
-#also enforce MIN_SINGLE_CDS
-if [ $VITERBI -lt 1 ];then
-  $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>/dev/null | \
-    gffread --tlf |\
-    perl -F'\t' -ane '{if($F[8]=~/exonCount=1;exons=(\S+);CDS=(\d+):(\d+);CDSphase=\d/){print if($3-$2>'$MIN_SINGLE_CDS');}else{print}}' |\
-    gffread > $FASTA.gff.tmp && \
-  mv $FASTA.gff.tmp $FASTA.uniann.gff
-else
-  $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>out.err | \
-    gffread --tlf |\
-    perl -F'\t' -ane '{if($F[8]=~/exonCount=1;exons=(\S+);CDS=(\d+):(\d+);CDSphase=\d/){print if($3-$2>'$MIN_SINGLE_CDS');}else{print}}' |\
-    gffread > $FASTA.gff.tmp && \
-  mv $FASTA.gff.tmp $FASTA.uniann.gff
-fi 
+#also enforce MIN_CDS
+$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>$OUTDEV | \
+  gffread --tlf |\
+  perl -F'\t' -ane '{
+    if($F[8]=~/exonCount=(1|2);exons=(\S+);CDS=(\d+):(\d+);CDSphase=\d/){
+      $cdslen=0;
+      @exons=split(/,/,$2);
+      foreach $e(@exons){
+        $cdslen+=$2-$1+1 if($e=~/(\d+)-(\d+)/);
+      }
+      print if($cdslen>'$MIN_CDS');
+    }else{
+      print;
+    }
+  }' |\
+  gffread > $FASTA.gff.tmp && \
+mv $FASTA.gff.tmp $FASTA.uniann.gff
 
 echo "Output gff file is $FASTA.uniann.gff"
