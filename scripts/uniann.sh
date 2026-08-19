@@ -115,7 +115,7 @@ if [ ! -s out.ps.txt ];then
   $MYPATH/preprocess_psauron_scores.pl $FASTA $PSAURON
 fi
 
-FACTOR=`cat $SCOREFILE |perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}'|perl -ane 'BEGIN{$max_score=0}{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10);$max_score=$score if($score>$max_score);}}END{die("Incorrect scores in the input file: must be between 0 and 1!") if($max_score<=0);print int(900/$max_score+0.5)}'` && \
+FACTOR=`cat $SCOREFILE |perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}'|perl -ane 'BEGIN{$max_score=0}{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10);$max_score=$score if($score>$max_score);}}END{die("Incorrect scores in the input file: must be between 0 and 1!") if($max_score<=0);print int(1000/$max_score+0.5)}'` && \
 log "Multiplier is $MULT, FACTOR is $FACTOR" && \
 #this produces out.atg.txt out.gt.txt and out.ag.txt out.stop
 cat $SCOREFILE | \
