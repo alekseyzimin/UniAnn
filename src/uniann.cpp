@@ -72,8 +72,8 @@ string read_fasta(const string &file) {
 //------------------------------------------------------------
 // Load emissions: pos \t 7 values
 //------------------------------------------------------------
-vector<array<double, NUM_STATES>> load_emissions(const string &file, int L) {
-    vector<array<double, NUM_STATES>> emit(L);
+vector<array<float, NUM_STATES>> load_emissions(const string &file, int L) {
+    vector<array<float, NUM_STATES>> emit(L);
     for (int i = 0; i < L; i++)
         for (int s = 0; s < NUM_STATES; s++)
             emit[i][s] = NEG_INF;
@@ -240,7 +240,7 @@ struct DPCell {
 };
 
 vector<vector<DPCell>> init_dp(int L,
-                               const vector<array<double, NUM_STATES>> &emit)
+                               const vector<array<float, NUM_STATES>> &emit)
 {
     vector<vector<DPCell>> dp(L, vector<DPCell>(NUM_STATES));
 
@@ -265,7 +265,7 @@ vector<vector<DPCell>> init_dp(int L,
 //------------------------------------------------------------
 void run_viterbi(
     vector<vector<DPCell>> &dp,
-    const vector<array<double, NUM_STATES>> &emit,
+    const vector<array<float, NUM_STATES>> &emit,
     const vector<double> &gt_score,
     const vector<double> &ag_score,
     const vector<double> &atg_score,
