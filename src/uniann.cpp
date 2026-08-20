@@ -729,16 +729,8 @@ int main(int argc, char** argv) {
 
     //print DP and BT matrices
     for (int i = 0; i < L; i++) {
-        cerr << i << "\tdp";
-        for (int j = 0; j < 7; j++) {
-          fprintf(stderr,"\t%d",int(dp[i][j].dp));
-        }
-        cerr << "\n";
-        cerr << i << "\tbt";
-        for (int j = 0; j < 7; j++) {
-          fprintf(stderr,"\t%d",int(dp[i][j].bt));
-        }
-        cerr << "\n";
+      fprintf(stderr,"%d\tdp\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",i,int(dp[i][0].dp),int(dp[i][1].dp),int(dp[i][2].dp),int(dp[i][3].dp),int(dp[i][4].dp),int(dp[i][5].dp),int(dp[i][6].dp));
+      fprintf(stderr,"%d\tbt\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",i,int(dp[i][0].bt),int(dp[i][1].bt),int(dp[i][2].bt),int(dp[i][3].bt),int(dp[i][4].bt),int(dp[i][5].bt),int(dp[i][6].bt));
     }
 
 
