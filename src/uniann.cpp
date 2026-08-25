@@ -23,7 +23,7 @@ static const array<string, NUM_STATES> state_name = {
 };
 
 static const double NEG_INF = -1e9;
-static const int MIN_INTRON = 30;
+static const int MIN_INTRON = 40;
 static const int MIN_EXON   = 3;
 static const int MIN_INTER  = 30;
 static const int MIN_SINGLE = 100;
