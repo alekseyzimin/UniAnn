@@ -110,7 +110,7 @@ for my $g(keys %genome_seqs){
   my ($pp0,$pp1,$pp2)=(0,0,0);
   for(my $i=0;$i<length($seq_fwd);$i++){
     if(not(substr($seq_fwd,$i,1) =~ /A|C|G|T|a|c|g|t/)){
-      printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,0,$stop_value,$stop_value,$stop_value,0,substr($seq_fwd,$i,1);
+      printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,0,$stop_value,$stop_value,$stop_value,0,substr($seq_fwd,$i,1);
       next;
     }
     ($p0,$p1,$p2)=(0,0,0);
@@ -149,7 +149,7 @@ for my $g(keys %genome_seqs){
       $scoreN=$stop_n_score;
       $scoreI=$stop_i_score;
     }
-    printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI,substr($seq_fwd,$i,1);
+    printf FILEPS "%d\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f\t%s\n",$i,$scoreN,$p0,$p1,$p2,$scoreI,substr($seq_fwd,$i,1);
     $pp0=$p0 if($p0 > $stop_value);
     $pp1=$p1 if($p1 > $stop_value);
     $pp2=$p2 if($p2 > $stop_value);
