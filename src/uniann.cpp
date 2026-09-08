@@ -70,7 +70,7 @@ string read_fasta(const string &file) {
 }
 
 //------------------------------------------------------------
-// Load emissions: pos \t 7 values
+// Load emissions: pos \t 5 values (states 5 and 6 share the intron column)
 //------------------------------------------------------------
 vector<array<float, NUM_STATES>> load_emissions(const string &file, int L) {
     vector<array<float, NUM_STATES>> emit(L);

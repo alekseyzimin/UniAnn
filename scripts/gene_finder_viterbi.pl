@@ -309,11 +309,14 @@ sub load_emissions {
         chomp;
         next unless length;
         my ($pos, @vals) = split /\t/;
-        die "Need 7 emission values per line in $file\n"
-            unless @vals >= 7;
-        for my $s (0..6) {
+        die "Need 5 emission values per line in $file\n"
+            unless @vals >= 5;
+        for my $s (0..4) {
             $emit[$pos][$s] = $vals[$s];
         }
+        # states 5 and 6 share the single intron emission column
+        $emit[$pos][5] = $vals[4];
+        $emit[$pos][6] = $vals[4];
     }
     close $fh;
 
