@@ -71,7 +71,6 @@ do
             ;;
         -n|--noviterbi)
             OUTDEV="/dev/null"
-            shift
             ;;
         -s|--scores)
             SCOREFILE="$2"
