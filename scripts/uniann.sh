@@ -8,6 +8,8 @@ SCOREFILE="scores.txt"
 MULT=`perl -e 'print exp(1)'`
 OUTDEV="out.err"
 MIN_CDS=200
+BOTH_STRANDS=0
+EXTRA_FLAGS=()
 
 GC=
 RC=
@@ -43,6 +45,7 @@ echo "-f file sith a single fasta sequence"
 echo "-m multiplier to rescale probabilities before applying log, must be a number between 1 and 100, default: exp(1)"
 echo "-s file with scores for starts, stops and splice sites, 1-based coordinates"
 echo "-p psauron score file"
+echo "-a, --all-prob (flag) predict both strands; requires PSAURON reverse_all_prob scores"
 echo "-n (flag) do not save Viterbi matrix in out.err"
 }
 
@@ -71,6 +74,10 @@ do
             ;;
         -n|--noviterbi)
             OUTDEV="/dev/null"
+            EXTRA_FLAGS+=(-n)
+            ;;
+        -a|--all-prob)
+            BOTH_STRANDS=1
             ;;
         -s|--scores)
             SCOREFILE="$2"
@@ -78,6 +85,7 @@ do
             ;;
         -v|--verbose)
             set -x
+            EXTRA_FLAGS+=(-v)
             ;;
         -h|--help|-u|--usage)
             usage
@@ -107,6 +115,13 @@ if [[ ! -s $PSAURON ]];then
 echo "Input file of PSAURON scores $PSAURON not found or not specified!"
 usage
 exit 1
+fi
+
+# For -a, the helper prepares separate inputs and runs this forward pipeline for each strand.
+# It maps reverse predictions back to the original FASTA coordinates and combines both GFFs.
+if [[ $BOTH_STRANDS == 1 ]]; then
+    exec perl "$MYPATH/uniann_both_strands.pl" "$MYPATH/uniann.sh" \
+        "$FASTA" "$PSAURON" "$SCOREFILE" "$MULT" "${EXTRA_FLAGS[@]}"
 fi
 
 #this produces out.ps.txt
