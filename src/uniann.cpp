@@ -8,41 +8,16 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstdlib>
+
+#include "viterbi_model.h"
 #include <limits>
-#include <stdexcept>
 
 using namespace std;
-
-//------------------------------------------------------------
-// States:
-// 0: N
-// 1: E0  2: E1  3: E2
-// 4: I0  5: I1  6: I2
-//------------------------------------------------------------
-
-static const int NUM_STATES = 7;
-
-static const array<string, NUM_STATES> state_name = {
-    "N", "E0", "E1", "E2", "I0", "I1", "I2"
-};
-
-static const double NEG_INF = -1e9;
-static const int MIN_INTRON = 40;
-static const int MIN_EXON   = 3;
-static const int MIN_INTER  = 30;
-static const int MIN_SINGLE = 100;
+using namespace uniann;
 
 //------------------------------------------------------------
 // Helpers
 //------------------------------------------------------------
-
-inline bool is_exon(int s) {
-    return (s == 1 || s == 2 || s == 3);
-}
-
-inline bool is_intron(int s) {
-    return (s == 4 || s == 5 || s == 6);
-}
 
 inline bool is_label_exon(string s) {
     return (s == "E0" || s == "E1" || s == "E2");
@@ -109,11 +84,10 @@ static bool parse_double_field(const char *&cursor, double &value) {
 //------------------------------------------------------------
 // Load emissions: pos \t 5 values (states 5 and 6 share the intron column)
 //------------------------------------------------------------
-vector<array<float, NUM_STATES>> load_emissions(const string &file, int L) {
-    vector<array<float, NUM_STATES>> emit(L);
+vector<EmissionRow> load_emissions(const string &file, int L) {
+    vector<EmissionRow> emit(L);
     for (int i = 0; i < L; i++)
-        for (int s = 0; s < NUM_STATES; s++)
-            emit[i][s] = NEG_INF;
+        emit[i].fill(NEG_INF);
 
     ifstream in(file);
     if (!in) {
@@ -128,22 +102,33 @@ vector<array<float, NUM_STATES>> load_emissions(const string &file, int L) {
         int pos;
         if (!parse_int_field(cursor, pos) || pos < 0 || pos >= L)
             throw invalid_argument("Invalid emission position in " + file);
-        for (int s = 0; s < NUM_STATES-2; s++) {
+        for (int s = 0; s < EMISSION_COLUMNS; s++) {
             if (!parse_float_field(cursor, emit[pos][s]) || !isfinite(emit[pos][s]))
                 throw invalid_argument("Invalid emission value in " + file);
         }
-        emit[pos][5]=emit[pos][4];
-        emit[pos][6]=emit[pos][4];
     }
     return emit;
 }
 
 //------------------------------------------------------------
-// Load sparse ATG/GT/AG scores
+// Load sparse ATG/GT/AG/stop scores into one per-position array
 //------------------------------------------------------------
-vector<double> load_sparse_scores(const string &file, int L) {
-    vector<double> scores(L, NEG_INF);
+// A score is kept only where the sequence has the motif the file describes;
+// the transition rules never read a score anywhere else. Positions whose
+// sequence differs are reported, as the former separate safety check did.
+static const char *motif_label(SiteMotif motif) {
+    switch (motif) {
+        case SiteMotif::Donor: return "GT";
+        case SiteMotif::Acceptor: return "AG";
+        case SiteMotif::Start: return "ATG";
+        case SiteMotif::Stop: return "STOP";
+        default: return "";
+    }
+}
 
+void load_site_scores(const string &file, SiteMotif motif, const vector<char> &seq,
+                      vector<double> &site_score) {
+    const int L = seq.size();
     ifstream in(file);
     if (!in) {
         cerr << "Cannot open scores " << file << "\n";
@@ -159,9 +144,16 @@ vector<double> load_sparse_scores(const string &file, int L) {
         if (!parse_int_field(cursor, pos) || pos < 0 || pos >= L ||
             !parse_double_field(cursor, score) || !isfinite(score))
             throw invalid_argument("Invalid site score in " + file);
-        scores[pos] = score;
+        if (motif_starting_at(seq, pos) == motif) {
+            site_score[pos] = score;
+        } else if (score > NEG_INF) {
+            const int width = motif == SiteMotif::Donor || motif == SiteMotif::Acceptor ? 2 : 3;
+            string found;
+            for (int i = pos; i < pos + width && i < L; i++) found.push_back(toupper(seq[i]));
+            cerr << "WARNING: " << motif_label(motif) << " score " << score << " at position "
+                 << pos << " but sequence has " << found << "\n";
+        }
     }
-    return scores;
 }
 
 //------------------------------------------------------------
@@ -181,67 +173,6 @@ string get_fasta_header(const string &file) {
         }
     }
     return "sequence";
-}
-
-//------------------------------------------------------------
-// Safety check: verify GT/AG coordinates match the sequence
-//------------------------------------------------------------
-void safety_check_gt_ag_atg(
-    const vector<char> &seq,
-    const vector<double> &gt_score,
-    const vector<double> &ag_score,
-    const vector<double> &atg_score,
-    const vector<double> &stop_score
-) {
-    int L = seq.size();
-    for (int pos = 0; pos < L - 1; pos++) {
-
-        // Check GT
-        if (gt_score[pos] > NEG_INF) {
-            string dinuc;
-            dinuc.push_back(toupper(seq[pos]));
-            dinuc.push_back(toupper(seq[pos + 1]));
-            if (dinuc != "GT") {
-                cerr << "WARNING: GT score "<< gt_score[pos] << " at position "
-                     << pos << " but sequence has " << dinuc << "\n";
-            }
-        }
-
-        // Check AG
-        if (ag_score[pos] > NEG_INF) {
-            string dinuc;
-            dinuc.push_back(toupper(seq[pos]));
-            dinuc.push_back(toupper(seq[pos + 1]));
-            if (dinuc != "AG") {
-                cerr << "WARNING: AG score "<< ag_score[pos] << " at position "
-                     << pos << " but sequence has " << dinuc << "\n";
-            }
-        }
-
-        // Check ATG
-        if (atg_score[pos] > NEG_INF) {
-            string trinuc;
-            trinuc.push_back(toupper(seq[pos]));
-            trinuc.push_back(toupper(seq[pos + 1]));
-            trinuc.push_back(toupper(seq[pos + 2]));
-            if (trinuc != "ATG") {
-                cerr << "WARNING: ATG score "<< atg_score[pos] << " at position "
-                     << pos << " but sequence has " << trinuc << "\n";
-            }
-        }
-
-        // Check STOP
-        if (stop_score[pos] > NEG_INF) {
-            string trinuc;
-            trinuc.push_back(toupper(seq[pos]));
-            trinuc.push_back(toupper(seq[pos + 1]));
-            trinuc.push_back(toupper(seq[pos + 2]));
-            if (trinuc != "TAG"  && trinuc != "TGA" && trinuc != "TAA") {
-                cerr << "WARNING: STOP score "<< stop_score[pos] << " at position "
-                     << pos << " but sequence has " << trinuc << "\n";
-            }
-        }
-    }
 }
 
 //------------------------------------------------------------
@@ -291,14 +222,14 @@ public:
     const DPCell *operator[](int position) const { return cells.data() + static_cast<size_t>(position) * NUM_STATES; }
 };
 
-DPMatrix init_dp(int L, const vector<array<float, NUM_STATES>> &emit)
+DPMatrix init_dp(int L, const vector<EmissionRow> &emit)
 {
     DPMatrix dp(L);
 
     // Initialization at position 0 — force start in N
     for (int s = 0; s < NUM_STATES; s++) {
         double start_prob = (s == 0 ? 0.0 : NEG_INF);
-        double e = emit[0][s];
+        double e = emit[0][emission_column(s)];
 
         dp[0][s].dp = start_prob + e;
         dp[0][s].bt = -1;
@@ -316,169 +247,30 @@ DPMatrix init_dp(int L, const vector<array<float, NUM_STATES>> &emit)
 //------------------------------------------------------------
 void run_viterbi(
     DPMatrix &dp,
-    const vector<array<float, NUM_STATES>> &emit,
-    const vector<double> &gt_score,
-    const vector<double> &ag_score,
-    const vector<double> &atg_score,
-    const vector<double> &stop_score,
-    const vector<char> &seq,
-    const vector<vector<double>> &trans
+    const ModelInputs &inputs
 ) {
-    int L = seq.size();
+    const vector<char> &seq = inputs.seq;
+    const int L = seq.size();
 
     for (int i = 1; i < L; i++) {
-        char b_prev = seq[i - 1];
-        char b      = seq[i];
-        bool is_stop = false;
-
-        // on stop do not allow to continue in the same exon
-        if ( i >= 2 ) {
-          string codon;
-          codon.push_back(toupper(seq[i - 2]));
-          codon.push_back(toupper(seq[i - 1]));
-          codon.push_back(toupper(seq[i]));
-
-          if (codon == "TAA" || codon == "TAG" || codon == "TGA") 
-            is_stop = true;
-        }
+        const SiteContext site = site_context(seq, i);
 
         for (int to = 0; to < NUM_STATES; to++) {
-            double emit_log = emit[i][to];
-
-            // Fix for TAG stop where AG is acceptor
-            if (emit_log <= -1e6 && toupper(b_prev) == 'A' && toupper(b) == 'G' && i + 1 < L) {
-                emit_log = emit[i + 1][to];
-            }
-
             double best = -1e18;
             int best_from = -1;
 
             for (int from = 0; from < NUM_STATES; from++) {
+                PathMetadata previous_metadata;
+                previous_metadata.intron_len = dp[i - 1][from].intron_len;
+                previous_metadata.exon_len = dp[i - 1][from].exon_len;
+                previous_metadata.inter_len = dp[i - 1][from].inter_len;
+                previous_metadata.exon_from = dp[i - 1][from].exon_from;
+                previous_metadata.predecessor_state = dp[i - 1][from].bt;
 
-                double log_t = trans[from][to];
-
-                //prohibit staying in the exon if a stop is found
-                if (is_exon(to) && is_exon(from) && from==to && is_stop) {
-                  if (((i - 2) % 3) == to - 1) {
-                    log_t = NEG_INF;
-                  }
-                }
-
-                //--------------------------------------------------------
-                // Exon → Intron only at GT AND only if exon length ≥ MIN_EXON or it is the first exon
-                //--------------------------------------------------------
-                if (is_exon(from) && is_intron(to) &&
-                    toupper(b_prev) == 'G' && toupper(b) == 'T')
-                {
-                    int len = dp[i - 1][from].exon_len - 2;
-                    log_t = NEG_INF;
-
-                    if ((to - 4) == (from - 1) && (len >= MIN_EXON || dp[i - 1][from].exon_from == 0)) {
-                    // go into intron in the same frame
-                    //cerr << "DEBUG at " << i
-                    //     << " trying transition " << state_name[from]
-                    //     << " " << state_name[to]
-                    //     << " score " << dp[i - 1][from].dp
-                    //     << " emit " << emit_log
-                    //     << " length " << len << "\n";
-                        log_t = gt_score[i - 1];
-                    }
-
-                    //cerr << "DEBUG GT probability " << log_t << "\n";
-                }
-
-                //--------------------------------------------------------
-                // Intron → Exon only at AG AND only if intron length ≥ MIN_INTRON
-                //--------------------------------------------------------
-                if (is_intron(from) && is_exon(to) &&
-                    toupper(b_prev) == 'A' && toupper(b) == 'G')
-                {
-                    int len = dp[i - 1][from].intron_len + 2;
-                    log_t = NEG_INF;
-
-                    if (len >= MIN_INTRON) {
-                        int f = from - 4; // intron frame 0,1,2
-                        int e = to - 1;   // exon frame 0,1,2
-                        int mod = len % 3;
-                        //cerr << "DEBUG at " << i
-                        // << " trying transition " << state_name[from]
-                        // << " " << state_name[to]
-                        // << " score " << dp[i - 1][from].dp
-                        // << " emit " << emit_log
-                        // << " length " << len << "\n";
-
-                        // Frame‑compatible transitions
-                        if ((f == 0 && e == 0) || (f == 1 && e == 1) || (f == 2 && e == 2)) {
-                            if (mod == 0) log_t = ag_score[i - 1];
-                        }
-                        else if ((f == 0 && e == 1) || (f == 1 && e == 2) || (f == 2 && e == 0)) {
-                            if (mod == 1) log_t = ag_score[i - 1];
-                        }
-                        else if ((f == 0 && e == 2) || (f == 1 && e == 0) || (f == 2 && e == 1)) {
-                            if (mod == 2) log_t = ag_score[i - 1];
-                        }
-                    }
-
-                    //cerr << "DEBUG AG probability " << log_t << "\n";
-                }
-
-                //--------------------------------------------------------
-                // Exon → Noncoding after STOP codon (TAA, TAG, TGA)
-                //--------------------------------------------------------
-                if (is_exon(from) && to == 0 && is_stop) {
-                    int len = dp[i - 1][from].exon_len - 2;
-                    int frame = from - 1;
-                    if (((i - 2) % 3) == frame) {
-                        //cerr << "DEBUG at " << i
-                        //     << " trying transition " << state_name[from]
-                        //     << " " << state_name[to]
-                        //     << " origin "<< dp[i-1][from].exon_from
-                        //     << " score " << dp[i - 1][from].dp
-                        //     << " emission " << emit_log << "\n";
-                        if(is_intron(dp[i-1][from].exon_from) || (dp[i-1][from].exon_from == 0 && len > MIN_SINGLE)){ // if came from intron or came from noncoding and min length satisfied
-                          log_t = stop_score[i - 2]; 
-                        }else{
-                          log_t = -1e3;
-                        }
-                    }
-                    //cerr << "DEBUG STOP probability " << log_t << "\n";
-                }
-
-                //--------------------------------------------------------
-                // Noncoding → Exon after START codon (ATG)
-                //--------------------------------------------------------
-                if (is_exon(to) && from == 0 && i >= 2) {
-                    string codon;
-                    codon.push_back(toupper(seq[i - 2]));
-                    codon.push_back(toupper(seq[i - 1]));
-                    codon.push_back(toupper(seq[i]));
-                    int len = dp[i - 1][from].inter_len + 2;
-                    if (codon == "ATG" && (len >= MIN_INTER || i < MIN_INTER) && dp[i-1][from].bt == 0) { //must come from non-coding
-
-                        int frame = to - 1;
-                        if (((i - 2) % 3) == frame) { //only in the right frame and if psauron score is positive in this frame
-                        //cerr << "DEBUG at " << i
-                        //     << " trying transition " << state_name[from]
-                        //     << " " << state_name[to]
-                        //     << " score " << dp[i - 1][from].dp
-                        //     << " emission " << emit_log << "\n";
-
-                            if (i < 25) {
-                              log_t = 1.0;
-                            } else {
-                              log_t = atg_score[i - 2];
-                              //log_t = 1.0;
-                            }
-                        }
-
-                        //cerr << "DEBUG ATG probability " << log_t << "\n";
-                    }
-                }
-
-                //--------------------------------------------------------
-                // Candidate score
-                //--------------------------------------------------------
-                double cand = dp[i - 1][from].dp + log_t + emit_log;
+                const auto edge = evaluate_transition(i, from, to, previous_metadata, inputs, site);
+                // Preserve upstream propagation of the finite NEG_INF sentinel:
+                // a forbidden edge still competes with a very low score.
+                double cand = dp[i - 1][from].dp + edge.transition_score + edge.emission_score;
 
                 if (cand > best) {
                     best = cand;
@@ -660,56 +452,66 @@ void write_gff_feature(
 //------------------------------------------------------------
 // Emit all GFF3 features from the state path
 //------------------------------------------------------------
-void write_gff_from_path(
-    const vector<int> &path_states,
-    const vector<double> &scores,
-    const string &seqid,
-    const string &f_fasta,
-    double best_final
-) { 
-  // Look labels up per position instead of materializing one string per base.
-  const auto labels = [&](size_t i) -> const string & { return state_name[path_states[i]]; };
-  cout << "##gff-version 3\n";
-  string current_state = labels(0);
-  string previous_state = labels(0);
-  double score_offset = scores[0];
+// Consume state changes so both a per-base path and compressed runs use the
+// same upstream GFF boundaries and interval-score convention.
+class GffPathWriter {
+    const string &seqid;
+    const string &fasta;
+    string current_state;
+    string previous_state;
+    int start = 0;
+    double score_offset;
 
-  int start = 0;
-  int end = 0;
-
-  for (size_t i = 1; i < path_states.size(); i++) {
-    if (labels(i) != current_state) {
-      end = i - 1;
-      if (current_state == "N")  { // transitioned to exon
-        end = i - 2;
-      }
-      if (labels(i) == "N") { //transitioned to non-coding
-        end = i + 1;
-      }
-      if(end > start) {
-        if(is_label_exon(current_state) && is_label_intron(previous_state)) {
-          write_gff_feature(seqid, current_state, start+2, end, f_fasta, (scores[i]-score_offset)/(end-start+1));
-        }else if(is_label_intron(current_state) && is_label_exon(previous_state)) {
-          write_gff_feature(seqid, current_state, start, end+2, f_fasta, (scores[i]-score_offset)/(end-start+1));
-        }else{
-          write_gff_feature(seqid, current_state, start, end, f_fasta, (scores[i]-score_offset)/(end-start+1)); 
-        }
-      }
-      if (current_state == "N"){
-        start = i - 1;
-        score_offset = scores[i];
-      } else if (labels(i) == "N" ){
-        start = i + 2;
-      } else {
-        start = i;
-      }
-      previous_state = current_state;
-      current_state = labels(i);
+public:
+    GffPathWriter(const string &sequence_id, const string &fasta_filename,
+                  const string &initial_state, double initial_score)
+        : seqid(sequence_id), fasta(fasta_filename), current_state(initial_state),
+          previous_state(initial_state), score_offset(initial_score) {
+        cout << "##gff-version 3\n";
     }
-  }
 
-  // Final segment
-  write_gff_feature(seqid, current_state, start, path_states.size() - 1, f_fasta, best_final);
+    void transition(const string &next_state, int position, double score) {
+        int end = position - 1;
+        if (current_state == "N") end = position - 2;
+        if (next_state == "N") end = position + 1;
+        if (end > start) {
+            const double interval_score = (score - score_offset) / (end - start + 1);
+            if (is_label_exon(current_state) && is_label_intron(previous_state)) {
+                write_gff_feature(seqid, current_state, start + 2, end, fasta, interval_score);
+            } else if (is_label_intron(current_state) && is_label_exon(previous_state)) {
+                write_gff_feature(seqid, current_state, start, end + 2, fasta, interval_score);
+            } else {
+                write_gff_feature(seqid, current_state, start, end, fasta, interval_score);
+            }
+        }
+        if (current_state == "N") {
+            start = position - 1;
+            score_offset = score;
+        } else if (next_state == "N") {
+            start = position + 2;
+        } else {
+            start = position;
+        }
+        previous_state = current_state;
+        current_state = next_state;
+    }
+
+    void finish(int length, double best_final) {
+        // Preserve upstream's special final-segment score and boundaries.
+        write_gff_feature(seqid, current_state, start, length - 1, fasta, best_final);
+    }
+};
+
+void write_gff_from_path(
+    const vector<int> &path_states, const vector<double> &scores,
+    const string &seqid, const string &f_fasta, double best_final
+) {
+    GffPathWriter writer(seqid, f_fasta, state_name[path_states[0]], scores[0]);
+    for (size_t i = 1; i < path_states.size(); ++i) {
+        if (path_states[i] != path_states[i - 1])
+            writer.transition(state_name[path_states[i]], i, scores[i]);
+    }
+    writer.finish(path_states.size(), best_final);
 }
 
 //------------------------------------------------------------
@@ -748,23 +550,21 @@ int run_uniann(int argc, char** argv) {
     string().swap(seq_str);
 
     //--------------------------------------------------------
-    // Load emissions and splice scores
+    // Load emissions and site scores; the score loader also reports
+    // coordinates whose sequence lacks the expected motif.
     //--------------------------------------------------------
-    auto emit     =  load_emissions(f_emit, L);
-    auto gt_score =  load_sparse_scores(f_gt, L);
-    auto ag_score =  load_sparse_scores(f_ag, L);
-    auto atg_score = load_sparse_scores(f_atg, L);
-    auto stop_score = load_sparse_scores(f_stop, L);
-
-    //--------------------------------------------------------
-    // Safety check: GT/AG coordinates match sequence
-    //--------------------------------------------------------
-    safety_check_gt_ag_atg(seq, gt_score, ag_score, atg_score, stop_score);
+    auto emit = load_emissions(f_emit, L);
+    vector<double> site_score(L, NEG_INF);
+    load_site_scores(f_gt, SiteMotif::Donor, seq, site_score);
+    load_site_scores(f_ag, SiteMotif::Acceptor, seq, site_score);
+    load_site_scores(f_atg, SiteMotif::Start, seq, site_score);
+    load_site_scores(f_stop, SiteMotif::Stop, seq, site_score);
 
     //--------------------------------------------------------
     // Initialize transitions
     //--------------------------------------------------------
     auto trans = init_transitions();
+    const ModelInputs inputs{emit, site_score, seq, trans};
 
     //--------------------------------------------------------
     // Initialize DP
@@ -774,7 +574,7 @@ int run_uniann(int argc, char** argv) {
     //--------------------------------------------------------
     // Run full Viterbi
     //--------------------------------------------------------
-    run_viterbi(dp, emit, gt_score, ag_score, atg_score, stop_score, seq, trans);
+    run_viterbi(dp, inputs);
 
     //print DP and BT matrices unless the caller asked to skip the dump
     if (!no_dp_dump) {
@@ -804,6 +604,7 @@ int run_uniann(int argc, char** argv) {
 
     return 0;
 }
+
 
 int main(int argc, char **argv) {
     try {
