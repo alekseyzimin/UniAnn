@@ -6,6 +6,10 @@
 #include <cmath>
 #include <array>
 #include <algorithm>
+#include <cerrno>
+#include <cstdlib>
+#include <limits>
+#include <stdexcept>
 
 using namespace std;
 
@@ -70,6 +74,39 @@ string read_fasta(const string &file) {
 }
 
 //------------------------------------------------------------
+// Whitespace-separated numeric fields parsed in place. A stringstream per
+// line costs more than the decoder itself on a chromosome-sized emission
+// file; strtol/strtof/strtod accept the same decimal text.
+//------------------------------------------------------------
+static bool parse_int_field(const char *&cursor, int &value) {
+    char *end = nullptr;
+    errno = 0;
+    const long parsed = strtol(cursor, &end, 10);
+    if (end == cursor || errno == ERANGE ||
+        parsed < numeric_limits<int>::min() || parsed > numeric_limits<int>::max())
+        return false;
+    cursor = end;
+    value = static_cast<int>(parsed);
+    return true;
+}
+
+static bool parse_float_field(const char *&cursor, float &value) {
+    char *end = nullptr;
+    value = strtof(cursor, &end);
+    if (end == cursor) return false;
+    cursor = end;
+    return true;
+}
+
+static bool parse_double_field(const char *&cursor, double &value) {
+    char *end = nullptr;
+    value = strtod(cursor, &end);
+    if (end == cursor) return false;
+    cursor = end;
+    return true;
+}
+
+//------------------------------------------------------------
 // Load emissions: pos \t 5 values (states 5 and 6 share the intron column)
 //------------------------------------------------------------
 vector<array<float, NUM_STATES>> load_emissions(const string &file, int L) {
@@ -87,11 +124,13 @@ vector<array<float, NUM_STATES>> load_emissions(const string &file, int L) {
     string line;
     while (getline(in, line)) {
         if (line.empty() || line[0] == '#') continue;
-        stringstream ss(line);
+        const char *cursor = line.c_str();
         int pos;
-        ss >> pos;
+        if (!parse_int_field(cursor, pos) || pos < 0 || pos >= L)
+            throw invalid_argument("Invalid emission position in " + file);
         for (int s = 0; s < NUM_STATES-2; s++) {
-            ss >> emit[pos][s];
+            if (!parse_float_field(cursor, emit[pos][s]) || !isfinite(emit[pos][s]))
+                throw invalid_argument("Invalid emission value in " + file);
         }
         emit[pos][5]=emit[pos][4];
         emit[pos][6]=emit[pos][4];
@@ -114,10 +153,12 @@ vector<double> load_sparse_scores(const string &file, int L) {
     string line;
     while (getline(in, line)) {
         if (line.empty() || line[0] == '#') continue;
-        stringstream ss(line);
+        const char *cursor = line.c_str();
         int pos;
         double score;
-        ss >> pos >> score;
+        if (!parse_int_field(cursor, pos) || pos < 0 || pos >= L ||
+            !parse_double_field(cursor, score) || !isfinite(score))
+            throw invalid_argument("Invalid site score in " + file);
         scores[pos] = score;
     }
     return scores;
@@ -230,19 +271,29 @@ vector<vector<double>> init_transitions() {
 //------------------------------------------------------------
 // DP structures
 //------------------------------------------------------------
+// Field order keeps the cell at 24 bytes; the previous order padded it to 32.
 struct DPCell {
     double dp;
-    short int bt;
     int intron_len;
     int exon_len;
     int inter_len;
+    short int bt;
     short int exon_from;
 };
 
-vector<vector<DPCell>> init_dp(int L,
-                               const vector<array<float, NUM_STATES>> &emit)
+// One contiguous block instead of one heap allocation per position: the
+// per-row vector header and allocator overhead cost about 40 bytes per base.
+class DPMatrix {
+    vector<DPCell> cells;
+public:
+    explicit DPMatrix(int L) : cells(static_cast<size_t>(L) * NUM_STATES) {}
+    DPCell *operator[](int position) { return cells.data() + static_cast<size_t>(position) * NUM_STATES; }
+    const DPCell *operator[](int position) const { return cells.data() + static_cast<size_t>(position) * NUM_STATES; }
+};
+
+DPMatrix init_dp(int L, const vector<array<float, NUM_STATES>> &emit)
 {
-    vector<vector<DPCell>> dp(L, vector<DPCell>(NUM_STATES));
+    DPMatrix dp(L);
 
     // Initialization at position 0 — force start in N
     for (int s = 0; s < NUM_STATES; s++) {
@@ -264,7 +315,7 @@ vector<vector<DPCell>> init_dp(int L,
 // Full Viterbi DP
 //------------------------------------------------------------
 void run_viterbi(
-    vector<vector<DPCell>> &dp,
+    DPMatrix &dp,
     const vector<array<float, NUM_STATES>> &emit,
     const vector<double> &gt_score,
     const vector<double> &ag_score,
@@ -495,7 +546,7 @@ void run_viterbi(
 // Termination: find best final state
 //------------------------------------------------------------
 pair<double, int> viterbi_termination(
-    const vector<vector<DPCell>> &dp,
+    const DPMatrix &dp,
     int L
 ) {
     double best_final = -1e18;
@@ -514,7 +565,7 @@ pair<double, int> viterbi_termination(
 // Backtrace: reconstruct optimal path
 //------------------------------------------------------------
 vector<int> viterbi_backtrace(
-    const vector<vector<DPCell>> &dp,
+    const DPMatrix &dp,
     int L,
     int best_state
 ) {
@@ -533,7 +584,7 @@ vector<int> viterbi_backtrace(
 // Backtrace: get scores for optimal path
 //------------------------------------------------------------
 vector<double> viterbi_backtrace_scores(
-    const vector<vector<DPCell>> &dp,
+    const DPMatrix &dp,
     int L,
     int best_state
 ) {
@@ -546,17 +597,6 @@ vector<double> viterbi_backtrace_scores(
         if (cur < 0) break;
     }
     return path_scores;
-}
-
-//------------------------------------------------------------
-// Convert state numbers to labels
-//------------------------------------------------------------
-vector<string> states_to_labels(const vector<int> &path_states) {
-    vector<string> labels(path_states.size());
-    for (size_t i = 0; i < path_states.size(); i++) {
-        labels[i] = state_name[path_states[i]];
-    }
-    return labels;
 }
 
 //------------------------------------------------------------
@@ -621,27 +661,29 @@ void write_gff_feature(
 // Emit all GFF3 features from the state path
 //------------------------------------------------------------
 void write_gff_from_path(
-    const vector<string> &labels,
+    const vector<int> &path_states,
     const vector<double> &scores,
     const string &seqid,
     const string &f_fasta,
     double best_final
 ) { 
+  // Look labels up per position instead of materializing one string per base.
+  const auto labels = [&](size_t i) -> const string & { return state_name[path_states[i]]; };
   cout << "##gff-version 3\n";
-  string current_state = labels[0];
-  string previous_state = labels[0];
+  string current_state = labels(0);
+  string previous_state = labels(0);
   double score_offset = scores[0];
 
   int start = 0;
   int end = 0;
 
-  for (size_t i = 1; i < labels.size(); i++) {
-    if (labels[i] != current_state) {
+  for (size_t i = 1; i < path_states.size(); i++) {
+    if (labels(i) != current_state) {
       end = i - 1;
       if (current_state == "N")  { // transitioned to exon
         end = i - 2;
       }
-      if (labels[i] == "N") { //transitioned to non-coding
+      if (labels(i) == "N") { //transitioned to non-coding
         end = i + 1;
       }
       if(end > start) {
@@ -656,29 +698,35 @@ void write_gff_from_path(
       if (current_state == "N"){
         start = i - 1;
         score_offset = scores[i];
-      } else if (labels[i] == "N" ){
+      } else if (labels(i) == "N" ){
         start = i + 2;
       } else {
         start = i;
       }
       previous_state = current_state;
-      current_state = labels[i];
+      current_state = labels(i);
     }
   }
 
   // Final segment
-  write_gff_feature(seqid, current_state, start, labels.size() - 1, f_fasta, best_final);
+  write_gff_feature(seqid, current_state, start, path_states.size() - 1, f_fasta, best_final);
 }
 
 //------------------------------------------------------------
 // MAIN
 //------------------------------------------------------------
-int main(int argc, char** argv) {
+int run_uniann(int argc, char** argv) {
 
-    if (argc < 5) {
+    if (argc < 7) {
         cerr << "Usage: " << argv[0]
-             << " seq.fasta emissions.txt gt.txt ag.txt\n";
+             << " seq.fasta emissions.txt gt.txt ag.txt atg.txt stop.txt [--no-dp-dump]\n";
         return 1;
+    }
+    bool no_dp_dump = false;
+    for (int argument = 7; argument < argc; ++argument) {
+        const string option = argv[argument];
+        if (option == "--no-dp-dump") no_dp_dump = true;
+        else throw invalid_argument("Unknown option: " + option);
     }
 
     string f_fasta = argv[1];
@@ -692,11 +740,12 @@ int main(int argc, char** argv) {
     // Load FASTA
     //--------------------------------------------------------
     string seq_str = read_fasta(f_fasta);
-    int L = seq_str.size();
+    if (seq_str.empty() || seq_str.size() > static_cast<size_t>(numeric_limits<int>::max()))
+        throw invalid_argument("FASTA must contain 1..INT_MAX sequence bases");
+    const int L = seq_str.size();
 
-    vector<char> seq(L);
-    for (int i = 0; i < L; i++)
-        seq[i] = seq_str[i];
+    vector<char> seq(seq_str.begin(), seq_str.end());
+    string().swap(seq_str);
 
     //--------------------------------------------------------
     // Load emissions and splice scores
@@ -727,10 +776,12 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------
     run_viterbi(dp, emit, gt_score, ag_score, atg_score, stop_score, seq, trans);
 
-    //print DP and BT matrices
-    for (int i = 0; i < L; i++) {
+    //print DP and BT matrices unless the caller asked to skip the dump
+    if (!no_dp_dump) {
+      for (int i = 0; i < L; i++) {
       fprintf(stderr,"%d\tdp\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",i,int(dp[i][0].dp),int(dp[i][1].dp),int(dp[i][2].dp),int(dp[i][3].dp),int(dp[i][4].dp),int(dp[i][5].dp),int(dp[i][6].dp));
       fprintf(stderr,"%d\tbt\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",i,int(dp[i][0].bt),int(dp[i][1].bt),int(dp[i][2].bt),int(dp[i][3].bt),int(dp[i][4].bt),int(dp[i][5].bt),int(dp[i][6].bt));
+      }
     }
 
 
@@ -744,14 +795,21 @@ int main(int argc, char** argv) {
     //--------------------------------------------------------
     auto path_states = viterbi_backtrace(dp, L, best_state);
     auto path_scores = viterbi_backtrace_scores(dp, L, best_state);
-    auto path_labels = states_to_labels(path_states);
 
     //--------------------------------------------------------
     // Write GFF3 output
     //--------------------------------------------------------
     string seqid = get_fasta_header(f_fasta);
-    write_gff_from_path(path_labels, path_scores, seqid, f_fasta, best_final);
+    write_gff_from_path(path_states, path_scores, seqid, f_fasta, best_final);
 
     return 0;
 }
 
+int main(int argc, char **argv) {
+    try {
+        return run_uniann(argc, argv);
+    } catch (const exception &error) {
+        cerr << error.what() << '\n';
+        return 1;
+    }
+}
