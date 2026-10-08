@@ -39,3 +39,10 @@
 
 # debug information files
 *.dwo
+
+# Local datasets, experiments and build/test outputs
+data/
+src/uniann
+src/compute_markov_scores
+src/test_*
+__pycache__/
