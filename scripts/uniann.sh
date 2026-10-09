@@ -3,7 +3,7 @@ MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 
 FASTA="genome.fa"
-PSAURON="psauron_score.csv"
+CODING_FRAME="coding.txt"
 SCOREFILE="scores.txt"
 MULT=`perl -e 'print exp(1)'`
 OUTDEV="out.err"
@@ -44,8 +44,7 @@ echo "uniann.sh [arguments]"
 echo "-f file sith a single fasta sequence"
 echo "-m multiplier to rescale probabilities before applying log, must be a number between 1 and 100, default: exp(1)"
 echo "-s file with scores for starts, stops and splice sites, 1-based coordinates"
-echo "-p psauron score file"
-echo "-a, --all-prob (flag) predict both strands; requires PSAURON reverse_all_prob scores"
+echo "-p coding frame score file"
 echo "-n (flag) do not save Viterbi matrix in out.err"
 }
 
@@ -64,8 +63,8 @@ do
             FASTA="$2"
             shift
             ;;
-        -p|--psauron)
-            PSAURON="$2"
+        -c|--coding)
+            CODING_FRAME="$2"
             shift
             ;;
         -m|--mult)
@@ -75,9 +74,6 @@ do
         -n|--noviterbi)
             OUTDEV="/dev/null"
             EXTRA_FLAGS+=(-n)
-            ;;
-        -a|--all-prob)
-            BOTH_STRANDS=1
             ;;
         -s|--scores)
             SCOREFILE="$2"
@@ -106,28 +102,30 @@ exit 1
 fi
 
 if [[ ! -s $SCOREFILE ]];then
-echo "Input training annotation file $TRAINING_A not found or not specified!"
+echo "Input training annotation file $SCOREFILE not found or not specified!"
 usage
 exit 1
 fi
 
-if [[ ! -s $PSAURON ]];then
-echo "Input file of PSAURON scores $PSAURON not found or not specified!"
+if [[ ! -s $CODING_FRAME ]];then
+echo "Input file of coding frame scores $CODING_FRAME not found or not specified!"
 usage
 exit 1
 fi
 
 # For -a, the helper prepares separate inputs and runs this forward pipeline for each strand.
 # It maps reverse predictions back to the original FASTA coordinates and combines both GFFs.
-if [[ $BOTH_STRANDS == 1 ]]; then
-    exec perl "$MYPATH/uniann_both_strands.pl" "$MYPATH/uniann.sh" \
-        "$FASTA" "$PSAURON" "$SCOREFILE" "$MULT" "${EXTRA_FLAGS[@]}"
-fi
+# this need rework
+#if [[ $BOTH_STRANDS == 1 ]]; then
+#    exec perl "$MYPATH/uniann_both_strands.pl" "$MYPATH/uniann.sh" \
+#        "$FASTA" "$PSAURON" "$SCOREFILE" "$MULT" "${EXTRA_FLAGS[@]}"
+#fi
 
 #this produces out.ps.txt
 log "Preprocessing inputs" && \
 if [ ! -s out.ps.txt ];then
-  $MYPATH/preprocess_psauron_scores.pl $FASTA $PSAURON
+  $MYPATH/convert_coding_frame.pl $FASTA < $CODING_FRAME > out.ps.txt.tmp && \
+  mv out.ps.txt.tmp out.ps.txt
 fi
 
 FACTOR=`cat $SCOREFILE |perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}'|perl -ane 'BEGIN{$max_score=0}{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10);$max_score=$score if($score>$max_score);}}END{die("Incorrect scores in the input file: must be between 0 and 1!") if($max_score<=0);print int(1000/$max_score+0.5)}'` && \
