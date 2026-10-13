@@ -1,0 +1,78 @@
+{
+  "single_exon": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t156\t3.54\t+\t.\tParent=sequence.fa.1;state=E0\n",
+    "dump_sha256": "81cc0fdf6d5fe02cfe45a49c73f56339adf060e79f0c285b054244e297465843"
+  },
+  "early_start": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t1\t126\t3.54\t+\t.\tParent=sequence.fa.0;state=E0\n",
+    "dump_sha256": "5c5513212b8d25c888774e2af44cd1812349fdd74d884359f5f3e156c19caf33"
+  },
+  "short_single_exon": {
+    "gff": "##gff-version 3\n",
+    "dump_sha256": "9f5a26611ee657387c9e5f5eb44655caa9cfd4be449696796e108bdce9814465"
+  },
+  "unknown_bases": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t71\t196\t3.05\t+\t.\tParent=sequence.fa.1;state=E1\n",
+    "dump_sha256": "8d3e4b8fdfbd3f2cd85e8bf292fcd8c76bc6b52f128c9ed7f76a0d03846e76ac"
+  },
+  "all_unknown": {
+    "gff": "##gff-version 3\n",
+    "dump_sha256": "17d2d689800057f2fd24e6395d54d2f1bd4831e841151a7a4b5e83137b5368e6"
+  },
+  "intron_37": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t93\t5.92\t+\t.\tParent=sequence.fa.1;state=E0\nfixture\tUniAnn\tintron\t94\t287\t638.8\t+\t.\tParent=sequence.fa.1;state=I0\n",
+    "dump_sha256": "86d77939ec968250064d68a28c647e2a030697edc708c13be99afe406e824561"
+  },
+  "intron_38": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t93\t5.92\t+\t.\tParent=sequence.fa.1;state=E0\nfixture\tUniAnn\tintron\t94\t288\t638.6\t+\t.\tParent=sequence.fa.1;state=I0\n",
+    "dump_sha256": "37eeee20be726092749646e149183b1c957146d5d15a959fc9dfc2c9d590fabb"
+  },
+  "intron_39": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t255\t2.51\t+\t.\tParent=sequence.fa.1;state=E0\n",
+    "dump_sha256": "f8385e11ff40c833c66d4c8507b3e19a0050f69b9e538272cc1fa726cf4acc67"
+  },
+  "intron_40": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t93\t5.92\t+\t.\tParent=sequence.fa.1;state=E0\nfixture\tUniAnn\tintron\t94\t133\t17.53\t+\t.\tParent=sequence.fa.1;state=I0\nfixture\tUniAnn\tCDS\t134\t256\t8.41\t+\t.\tParent=sequence.fa.1;state=E1\n",
+    "dump_sha256": "379b5b5d70bc3f6e1e2ff570a4ff483863fa147bffc4ac57563c2f38732aa780"
+  },
+  "intron_41": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t93\t5.92\t+\t.\tParent=sequence.fa.1;state=E0\nfixture\tUniAnn\tintron\t94\t134\t17.06\t+\t.\tParent=sequence.fa.1;state=I0\nfixture\tUniAnn\tCDS\t135\t257\t8.01\t+\t.\tParent=sequence.fa.1;state=E2\n",
+    "dump_sha256": "641989a5078a00b67c3ccfd7268a854506ca4b5c1c51b77912036b7159d3a592"
+  },
+  "intron_42": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t93\t5.92\t+\t.\tParent=sequence.fa.1;state=E0\nfixture\tUniAnn\tintron\t94\t135\t16.66\t+\t.\tParent=sequence.fa.1;state=I0\nfixture\tUniAnn\tCDS\t136\t258\t8.9\t+\t.\tParent=sequence.fa.1;state=E0\n",
+    "dump_sha256": "478dc8840ffe444ab7e961a270a565f332257bc7060c4bbc754100407d6281c8"
+  },
+  "lowercase": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t93\t5.92\t+\t.\tParent=sequence.fa.1;state=E0\nfixture\tUniAnn\tintron\t94\t135\t16.66\t+\t.\tParent=sequence.fa.1;state=I0\nfixture\tUniAnn\tCDS\t136\t258\t8.9\t+\t.\tParent=sequence.fa.1;state=E0\n",
+    "dump_sha256": "478dc8840ffe444ab7e961a270a565f332257bc7060c4bbc754100407d6281c8"
+  },
+  "tag_acceptor_overlap": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t31\t93\t5.92\t+\t.\tParent=sequence.fa.1;state=E0\nfixture\tUniAnn\tintron\t94\t134\t17.06\t+\t.\tParent=sequence.fa.1;state=I0\nfixture\tUniAnn\tCDS\t135\t257\t8.01\t+\t.\tParent=sequence.fa.1;state=E2\n",
+    "dump_sha256": "bda812ae872c76e8d564c3f12274c8753a005f4f7b5bd3bf0a12af6cb41874eb"
+  },
+  "random_0": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t98\t99\t0.5\t+\t.\tParent=sequence.fa.1;state=E1\nfixture\tUniAnn\tintron\t100\t199\t316\t+\t.\tParent=sequence.fa.1;state=I1\n",
+    "dump_sha256": "2e991091426a43ce0fdad4fa6e5318eb968dc93b7c07ed8c2d1fa581d9992000"
+  },
+  "random_1": {
+    "gff": "##gff-version 3\n",
+    "dump_sha256": "323306468d6d8f6a6f387a0305713d1d5375322c068e4774cc634bfe773adc9d"
+  },
+  "random_2": {
+    "gff": "##gff-version 3\n",
+    "dump_sha256": "559670c621b1e708602c45dcf60923aa018ff5768a07db885a145a3e6b5f8d86"
+  },
+  "random_3": {
+    "gff": "##gff-version 3\n",
+    "dump_sha256": "ada0bb70b9a4c5e1b0aa46ddac269dba7349886add0cfd7140d3095e0245c01b"
+  },
+  "random_4": {
+    "gff": "##gff-version 3\n",
+    "dump_sha256": "cab34a521168e29ae16324f292e39a2d3c05107527688010efb2a16e70b6dc91"
+  },
+  "random_5": {
+    "gff": "##gff-version 3\nfixture\tUniAnn\tCDS\t188\t199\t27\t+\t.\tParent=sequence.fa.1;state=E1\n",
+    "dump_sha256": "3e7f79d3220a9abb63d8322e3adebd243fd12fe3301fcb8e577587c8d10c4160"
+  }
+}

@@ -10,6 +10,7 @@ OUTDEV="out.err"
 MIN_CDS=200
 BOTH_STRANDS=0
 EXTRA_FLAGS=()
+DECODER_ARGS=()
 
 GC=
 RC=
@@ -74,6 +75,8 @@ do
         -n|--noviterbi)
             OUTDEV="/dev/null"
             EXTRA_FLAGS+=(-n)
+            # Also skip formatting the matrix; it would only be discarded.
+            DECODER_ARGS+=("--no-dp-dump")
             ;;
         -s|--scores)
             SCOREFILE="$2"
@@ -140,7 +143,7 @@ cat $SCOREFILE | \
 
 log "Building gene models" && \
 #also enforce MIN_CDS
-$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>$OUTDEV | \
+$MYPATH/uniann "$FASTA" out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt "${DECODER_ARGS[@]}" 2>$OUTDEV | \
   gffread --tlf |\
   perl -F'\t' -ane '{
     if($F[8]=~/exonCount=(1|2);exons=(\S+);CDS=(\d+):(\d+);CDSphase=\d/){
