@@ -36,5 +36,9 @@ debug:
 clean:
 	rm -f $(U_TARGET) $(U_OBJ) $(U_OBJ:.o=.d) $(C_TARGET) $(C_OBJ) $(C_OBJ:.o=.d)
 
-.PHONY: all clean debug
+.PHONY: all clean debug check
+
+check: $(U_TARGET)
+	python3 ../tests/test_legacy.py
+	python3 ../tests/test_wrapper.py
 
