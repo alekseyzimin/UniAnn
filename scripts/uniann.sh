@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 
@@ -127,6 +128,8 @@ if [ ! -s out.ps.txt ];then
   $MYPATH/convert_coding_frame.pl $FASTA < $CODING_FRAME > out.ps.txt.tmp && \
   mv out.ps.txt.tmp out.ps.txt
 fi
+PREPROCESS_STATUS=$?
+[ "$PREPROCESS_STATUS" -eq 0 ] || exit "$PREPROCESS_STATUS"
 
 FACTOR=`cat $SCOREFILE |perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}'|perl -ane 'BEGIN{$max_score=0}{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10);$max_score=$score if($score>$max_score);}}END{die("Incorrect scores in the input file: must be between 0 and 1!") if($max_score<=0);print int(1000/$max_score+0.5)}'` && \
 log "Multiplier is $MULT, Factor is $FACTOR" && \
@@ -155,6 +158,6 @@ $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 
     }
   }' |\
   gffread > $FASTA.gff.tmp && \
-mv $FASTA.gff.tmp $FASTA.uniann.gff
+mv $FASTA.gff.tmp $FASTA.uniann.gff || exit $?
 
 echo "Output gff file is $FASTA.uniann.gff"
