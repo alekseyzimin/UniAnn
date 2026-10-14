@@ -15,6 +15,7 @@ while($seq =~ /TAA|TAG|TGA/g){
 print STDERR "Found stops\n";
 while($line=<STDIN>){
   chomp($line);
+  next if $line =~ /^chrom\tposition_1based\tstrand\t/;
   @F=split(/\t/,$line);
   #apply temperature scaling
   #for($i=3;$i<7;$i++){
