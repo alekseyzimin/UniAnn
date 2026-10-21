@@ -13,14 +13,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class WrapperTests(unittest.TestCase):
     def setUp(self):
-        temporary = tempfile.TemporaryDirectory(prefix="uniann wrapper ")
+        temporary = tempfile.TemporaryDirectory(prefix="uniann-wrapper-")
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
         shutil.copy2(ROOT / "scripts" / "uniann.sh", self.directory / "uniann.sh")
         self.stub("convert_coding_frame.pl", 'cat "$1" -\n')
         self.stub("uniann", "touch native-called\ncat out.ps.txt\n")
         self.stub("gffread", "cat\n")
-        self.fasta = self.directory / "genome input.fa"
+        self.fasta = self.directory / "genome.fa"
         self.coding = self.directory / "coding probabilities.tsv"
         self.scores = self.directory / "site scores.tsv"
         self.emissions = self.directory / "out.ps.txt"
