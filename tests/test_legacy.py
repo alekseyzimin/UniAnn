@@ -31,6 +31,30 @@ class LegacyRegressionTests(unittest.TestCase):
                 self.assertEqual(quiet.stdout, result.stdout)
                 self.assertEqual(quiet.stderr, b'')
 
+    def test_scores_at_other_motifs_are_ignored(self):
+        sequence = next(sequence for name, sequence, _ in cases() if name == 'intron_40')
+        with tempfile.TemporaryDirectory() as directory:
+            files = write_inputs(directory, sequence)
+            command = [str(ROOT / 'src' / 'uniann'), *map(str, files)]
+            clean = subprocess.run(command, capture_output=True, check=True)
+            score_files = files[2:]
+            positions = [[int(line.split()[0]) for line in file.read_text().splitlines()]
+                         for file in score_files]
+            for kind, file in enumerate(score_files):
+                with file.open('a') as out:
+                    for other, other_positions in enumerate(positions):
+                        if other != kind:
+                            for position in other_positions:
+                                out.write(f'{position} 10000\n')
+                    # A truncated motif at the sequence end must also be safe.
+                    out.write(f'{len(sequence) - 1} 10000\n')
+            extra = subprocess.run(command, capture_output=True, check=True)
+            self.assertEqual(extra.stdout, clean.stdout)
+            self.assertIn(b'WARNING:', extra.stderr)
+            dump = b''.join(line for line in extra.stderr.splitlines(keepends=True)
+                            if not line.startswith(b'WARNING:'))
+            self.assertEqual(dump, clean.stderr)
+
     def test_rejected_inputs(self):
         missing = subprocess.run([str(ROOT / 'src' / 'uniann')], capture_output=True)
         self.assertEqual(missing.returncode, 1)

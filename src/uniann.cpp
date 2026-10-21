@@ -21,6 +21,8 @@ using namespace std;
 //------------------------------------------------------------
 
 static const int NUM_STATES = 7;
+// N, E0, E1, E2, and one shared column for I0/I1/I2.
+static const int EMISSION_COLUMNS = 5;
 
 static const array<string, NUM_STATES> state_name = {
     "N", "E0", "E1", "E2", "I0", "I1", "I2"
@@ -107,12 +109,12 @@ static bool parse_double_field(const char *&cursor, double &value) {
 }
 
 //------------------------------------------------------------
-// Load emissions: pos \t 5 values (states 5 and 6 share the intron column)
+// Load emissions: pos \t 5 values (I0, I1, and I2 share the intron column)
 //------------------------------------------------------------
-vector<array<float, NUM_STATES>> load_emissions(const string &file, int L) {
-    vector<array<float, NUM_STATES>> emit(L);
+vector<array<float, EMISSION_COLUMNS>> load_emissions(const string &file, int L) {
+    vector<array<float, EMISSION_COLUMNS>> emit(L);
     for (int i = 0; i < L; i++)
-        for (int s = 0; s < NUM_STATES; s++)
+        for (int s = 0; s < EMISSION_COLUMNS; s++)
             emit[i][s] = NEG_INF;
 
     ifstream in(file);
@@ -128,22 +130,31 @@ vector<array<float, NUM_STATES>> load_emissions(const string &file, int L) {
         int pos;
         if (!parse_int_field(cursor, pos) || pos < 0 || pos >= L)
             throw invalid_argument("Invalid emission position in " + file);
-        for (int s = 0; s < NUM_STATES-2; s++) {
+        for (int s = 0; s < EMISSION_COLUMNS; s++) {
             if (!parse_float_field(cursor, emit[pos][s]) || !isfinite(emit[pos][s]))
                 throw invalid_argument("Invalid emission value in " + file);
         }
-        emit[pos][5]=emit[pos][4];
-        emit[pos][6]=emit[pos][4];
     }
     return emit;
 }
 
 //------------------------------------------------------------
-// Load sparse ATG/GT/AG scores
+// Load sparse ATG/GT/AG/stop scores into one per-position array.
 //------------------------------------------------------------
-vector<double> load_sparse_scores(const string &file, int L) {
-    vector<double> scores(L, NEG_INF);
+// These motifs have different starts, so each position needs only one score.
+// Scores at other positions are never used by the transition rules.
+bool matches_site(const vector<char> &seq, int pos, const string &motif) {
+    const int width = (motif == "GT" || motif == "AG") ? 2 : 3;
+    if (pos > static_cast<int>(seq.size()) - width) return false;
+    string found;
+    for (int i = pos; i < pos + width; i++) found.push_back(toupper(seq[i]));
+    if (motif == "STOP") return found == "TAA" || found == "TAG" || found == "TGA";
+    return found == motif;
+}
 
+void load_site_scores(const string &file, const string &motif,
+                      const vector<char> &seq, vector<double> &site_score) {
+    const int L = seq.size();
     ifstream in(file);
     if (!in) {
         cerr << "Cannot open scores " << file << "\n";
@@ -159,9 +170,16 @@ vector<double> load_sparse_scores(const string &file, int L) {
         if (!parse_int_field(cursor, pos) || pos < 0 || pos >= L ||
             !parse_double_field(cursor, score) || !isfinite(score))
             throw invalid_argument("Invalid site score in " + file);
-        scores[pos] = score;
+        if (matches_site(seq, pos, motif)) {
+            site_score[pos] = score;
+        } else if (score > NEG_INF) {
+            const int width = (motif == "GT" || motif == "AG") ? 2 : 3;
+            string found;
+            for (int i = 0; i < width && i < L - pos; i++) found.push_back(toupper(seq[pos + i]));
+            cerr << "WARNING: " << motif << " score " << score << " at position "
+                 << pos << " but sequence has " << found << "\n";
+        }
     }
-    return scores;
 }
 
 //------------------------------------------------------------
@@ -181,67 +199,6 @@ string get_fasta_header(const string &file) {
         }
     }
     return "sequence";
-}
-
-//------------------------------------------------------------
-// Safety check: verify GT/AG coordinates match the sequence
-//------------------------------------------------------------
-void safety_check_gt_ag_atg(
-    const vector<char> &seq,
-    const vector<double> &gt_score,
-    const vector<double> &ag_score,
-    const vector<double> &atg_score,
-    const vector<double> &stop_score
-) {
-    int L = seq.size();
-    for (int pos = 0; pos < L - 1; pos++) {
-
-        // Check GT
-        if (gt_score[pos] > NEG_INF) {
-            string dinuc;
-            dinuc.push_back(toupper(seq[pos]));
-            dinuc.push_back(toupper(seq[pos + 1]));
-            if (dinuc != "GT") {
-                cerr << "WARNING: GT score "<< gt_score[pos] << " at position "
-                     << pos << " but sequence has " << dinuc << "\n";
-            }
-        }
-
-        // Check AG
-        if (ag_score[pos] > NEG_INF) {
-            string dinuc;
-            dinuc.push_back(toupper(seq[pos]));
-            dinuc.push_back(toupper(seq[pos + 1]));
-            if (dinuc != "AG") {
-                cerr << "WARNING: AG score "<< ag_score[pos] << " at position "
-                     << pos << " but sequence has " << dinuc << "\n";
-            }
-        }
-
-        // Check ATG
-        if (atg_score[pos] > NEG_INF) {
-            string trinuc;
-            trinuc.push_back(toupper(seq[pos]));
-            trinuc.push_back(toupper(seq[pos + 1]));
-            trinuc.push_back(toupper(seq[pos + 2]));
-            if (trinuc != "ATG") {
-                cerr << "WARNING: ATG score "<< atg_score[pos] << " at position "
-                     << pos << " but sequence has " << trinuc << "\n";
-            }
-        }
-
-        // Check STOP
-        if (stop_score[pos] > NEG_INF) {
-            string trinuc;
-            trinuc.push_back(toupper(seq[pos]));
-            trinuc.push_back(toupper(seq[pos + 1]));
-            trinuc.push_back(toupper(seq[pos + 2]));
-            if (trinuc != "TAG"  && trinuc != "TGA" && trinuc != "TAA") {
-                cerr << "WARNING: STOP score "<< stop_score[pos] << " at position "
-                     << pos << " but sequence has " << trinuc << "\n";
-            }
-        }
-    }
 }
 
 //------------------------------------------------------------
@@ -291,14 +248,14 @@ public:
     const DPCell *operator[](int position) const { return cells.data() + static_cast<size_t>(position) * NUM_STATES; }
 };
 
-DPMatrix init_dp(int L, const vector<array<float, NUM_STATES>> &emit)
+DPMatrix init_dp(int L, const vector<array<float, EMISSION_COLUMNS>> &emit)
 {
     DPMatrix dp(L);
 
     // Initialization at position 0 — force start in N
     for (int s = 0; s < NUM_STATES; s++) {
         double start_prob = (s == 0 ? 0.0 : NEG_INF);
-        double e = emit[0][s];
+        double e = emit[0][min(s, 4)];
 
         dp[0][s].dp = start_prob + e;
         dp[0][s].bt = -1;
@@ -316,38 +273,38 @@ DPMatrix init_dp(int L, const vector<array<float, NUM_STATES>> &emit)
 //------------------------------------------------------------
 void run_viterbi(
     DPMatrix &dp,
-    const vector<array<float, NUM_STATES>> &emit,
-    const vector<double> &gt_score,
-    const vector<double> &ag_score,
-    const vector<double> &atg_score,
-    const vector<double> &stop_score,
+    const vector<array<float, EMISSION_COLUMNS>> &emit,
+    const vector<double> &site_score,
     const vector<char> &seq,
     const vector<vector<double>> &trans
 ) {
     int L = seq.size();
 
     for (int i = 1; i < L; i++) {
-        char b_prev = seq[i - 1];
-        char b      = seq[i];
+        char b_prev = toupper(seq[i - 1]);
+        char b      = toupper(seq[i]);
+        bool is_gt = (b_prev == 'G' && b == 'T');
+        bool is_ag = (b_prev == 'A' && b == 'G');
         bool is_stop = false;
+        bool is_start = false;
 
-        // on stop do not allow to continue in the same exon
+        // Check start and stop codons once per position.
         if ( i >= 2 ) {
           string codon;
           codon.push_back(toupper(seq[i - 2]));
           codon.push_back(toupper(seq[i - 1]));
           codon.push_back(toupper(seq[i]));
 
-          if (codon == "TAA" || codon == "TAG" || codon == "TGA") 
-            is_stop = true;
+          is_stop = (codon == "TAA" || codon == "TAG" || codon == "TGA");
+          is_start = (codon == "ATG");
         }
 
         for (int to = 0; to < NUM_STATES; to++) {
-            double emit_log = emit[i][to];
+            double emit_log = emit[i][min(to, 4)];
 
             // Fix for TAG stop where AG is acceptor
-            if (emit_log <= -1e6 && toupper(b_prev) == 'A' && toupper(b) == 'G' && i + 1 < L) {
-                emit_log = emit[i + 1][to];
+            if (emit_log <= -1e6 && is_ag && i + 1 < L) {
+                emit_log = emit[i + 1][min(to, 4)];
             }
 
             double best = -1e18;
@@ -368,7 +325,7 @@ void run_viterbi(
                 // Exon → Intron only at GT AND only if exon length ≥ MIN_EXON or it is the first exon
                 //--------------------------------------------------------
                 if (is_exon(from) && is_intron(to) &&
-                    toupper(b_prev) == 'G' && toupper(b) == 'T')
+                    is_gt)
                 {
                     int len = dp[i - 1][from].exon_len - 2;
                     log_t = NEG_INF;
@@ -381,7 +338,7 @@ void run_viterbi(
                     //     << " score " << dp[i - 1][from].dp
                     //     << " emit " << emit_log
                     //     << " length " << len << "\n";
-                        log_t = gt_score[i - 1];
+                        log_t = site_score[i - 1];
                     }
 
                     //cerr << "DEBUG GT probability " << log_t << "\n";
@@ -391,7 +348,7 @@ void run_viterbi(
                 // Intron → Exon only at AG AND only if intron length ≥ MIN_INTRON
                 //--------------------------------------------------------
                 if (is_intron(from) && is_exon(to) &&
-                    toupper(b_prev) == 'A' && toupper(b) == 'G')
+                    is_ag)
                 {
                     int len = dp[i - 1][from].intron_len + 2;
                     log_t = NEG_INF;
@@ -409,13 +366,13 @@ void run_viterbi(
 
                         // Frame‑compatible transitions
                         if ((f == 0 && e == 0) || (f == 1 && e == 1) || (f == 2 && e == 2)) {
-                            if (mod == 0) log_t = ag_score[i - 1];
+                            if (mod == 0) log_t = site_score[i - 1];
                         }
                         else if ((f == 0 && e == 1) || (f == 1 && e == 2) || (f == 2 && e == 0)) {
-                            if (mod == 1) log_t = ag_score[i - 1];
+                            if (mod == 1) log_t = site_score[i - 1];
                         }
                         else if ((f == 0 && e == 2) || (f == 1 && e == 0) || (f == 2 && e == 1)) {
-                            if (mod == 2) log_t = ag_score[i - 1];
+                            if (mod == 2) log_t = site_score[i - 1];
                         }
                     }
 
@@ -436,7 +393,7 @@ void run_viterbi(
                         //     << " score " << dp[i - 1][from].dp
                         //     << " emission " << emit_log << "\n";
                         if(is_intron(dp[i-1][from].exon_from) || (dp[i-1][from].exon_from == 0 && len > MIN_SINGLE)){ // if came from intron or came from noncoding and min length satisfied
-                          log_t = stop_score[i - 2]; 
+                          log_t = site_score[i - 2];
                         }else{
                           log_t = -1e3;
                         }
@@ -447,13 +404,9 @@ void run_viterbi(
                 //--------------------------------------------------------
                 // Noncoding → Exon after START codon (ATG)
                 //--------------------------------------------------------
-                if (is_exon(to) && from == 0 && i >= 2) {
-                    string codon;
-                    codon.push_back(toupper(seq[i - 2]));
-                    codon.push_back(toupper(seq[i - 1]));
-                    codon.push_back(toupper(seq[i]));
+                if (is_exon(to) && from == 0 && is_start) {
                     int len = dp[i - 1][from].inter_len + 2;
-                    if (codon == "ATG" && (len >= MIN_INTER || i < MIN_INTER) && dp[i-1][from].bt == 0) { //must come from non-coding
+                    if ((len >= MIN_INTER || i < MIN_INTER) && dp[i-1][from].bt == 0) { //must come from non-coding
 
                         int frame = to - 1;
                         if (((i - 2) % 3) == frame) { //only in the right frame and if psauron score is positive in this frame
@@ -466,7 +419,7 @@ void run_viterbi(
                             if (i < 25) {
                               log_t = 1.0;
                             } else {
-                              log_t = atg_score[i - 2];
+                              log_t = site_score[i - 2];
                               //log_t = 1.0;
                             }
                         }
@@ -750,16 +703,12 @@ int run_uniann(int argc, char** argv) {
     //--------------------------------------------------------
     // Load emissions and splice scores
     //--------------------------------------------------------
-    auto emit     =  load_emissions(f_emit, L);
-    auto gt_score =  load_sparse_scores(f_gt, L);
-    auto ag_score =  load_sparse_scores(f_ag, L);
-    auto atg_score = load_sparse_scores(f_atg, L);
-    auto stop_score = load_sparse_scores(f_stop, L);
-
-    //--------------------------------------------------------
-    // Safety check: GT/AG coordinates match sequence
-    //--------------------------------------------------------
-    safety_check_gt_ag_atg(seq, gt_score, ag_score, atg_score, stop_score);
+    auto emit = load_emissions(f_emit, L);
+    vector<double> site_score(L, NEG_INF);
+    load_site_scores(f_gt, "GT", seq, site_score);
+    load_site_scores(f_ag, "AG", seq, site_score);
+    load_site_scores(f_atg, "ATG", seq, site_score);
+    load_site_scores(f_stop, "STOP", seq, site_score);
 
     //--------------------------------------------------------
     // Initialize transitions
@@ -774,7 +723,7 @@ int run_uniann(int argc, char** argv) {
     //--------------------------------------------------------
     // Run full Viterbi
     //--------------------------------------------------------
-    run_viterbi(dp, emit, gt_score, ag_score, atg_score, stop_score, seq, trans);
+    run_viterbi(dp, emit, site_score, seq, trans);
 
     //print DP and BT matrices unless the caller asked to skip the dump
     if (!no_dp_dump) {
