@@ -39,6 +39,5 @@ clean:
 .PHONY: all clean debug check
 
 check: $(U_TARGET)
-	python3 ../tests/test_legacy.py
-	python3 ../tests/test_wrapper.py
+	python3 -m unittest discover -s ../tests
 
