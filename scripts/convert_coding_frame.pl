@@ -16,12 +16,11 @@ print STDERR "Found stops\n";
 while($line=<STDIN>){
   chomp($line);
   @F=split(/\t/,$line);
-  #apply temperature scaling
   for($i=3;$i<7;$i++){
-    $F[$i]=1/(1+((1-$F[$i])/($F[$i]+1e-10))**(1/7));
+    $F[$i]=1/(1+((1-$F[$i])/($F[$i]+1e-10))**(1/3));
   }
   for($i=0;$i<3;$i++){
-    $coding_frame[($n-$i-1)%3]=log(exp(1)*$F[$i+3]*(1-$F[6]+0.15)+1e-10);
+    $coding_frame[($n-$i-1)%3]=log(exp(1)*$F[$i+3]*(1-$F[6])+1e-10);
   }
   $nc_score=log(exp(1)*$F[6]+1e-10);
   if($stops{($n-2)}){
