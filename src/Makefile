@@ -36,8 +36,5 @@ debug:
 clean:
 	rm -f $(U_TARGET) $(U_OBJ) $(U_OBJ:.o=.d) $(C_TARGET) $(C_OBJ) $(C_OBJ:.o=.d)
 
-.PHONY: all clean debug check
-
-check: $(U_TARGET)
-	python3 -m unittest discover -s ../tests
+.PHONY: all clean debug
 
