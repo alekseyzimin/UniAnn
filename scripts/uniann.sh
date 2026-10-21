@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o pipefail
 MYPATH="`dirname \"$0\"`"
 MYPATH="`( cd \"$MYPATH\" && pwd )`"
 
@@ -124,21 +125,29 @@ fi
 #this produces out.ps.txt
 log "Preprocessing inputs" && \
 "$MYPATH/convert_coding_frame.pl" "$FASTA" < "$CODING_FRAME" > out.ps.txt.tmp && \
-mv out.ps.txt.tmp out.ps.txt
+mv out.ps.txt.tmp out.ps.txt || error_exit "Failed to prepare coding frame scores" "$?"
 
-FACTOR=`cat $SCOREFILE |perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}'|perl -ane 'BEGIN{$max_score=0}{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10);$max_score=$score if($score>$max_score);}}END{die("Incorrect scores in the input file: must be between 0 and 1!") if($max_score<=0);print int(1000/$max_score+0.5)}'` && \
-log "Multiplier is $MULT, Factor is $FACTOR" && \
-#this produces out.atg.txt out.gt.txt and out.ag.txt out.stop
-cat $SCOREFILE | \
-  perl -ane '{$F[5]=$F[-1] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}' | \
-  tee >(perl -ane '{if($F[3] eq "donor"){$score=log($F[5]*'$MULT'+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.gt.txt) |\
-  tee >(perl -ane '{if($F[3] eq "acceptor"){$score=log($F[5]*'$MULT'+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.ag.txt) |\
-  tee >(perl -ane '{if($F[3] eq "start"){$score=log($F[5]*('$MULT')+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.atg.txt) | \
-  perl -ane '{if($F[3] eq "stop"){$score=log($F[5]*('$MULT')+1e-10)*'$FACTOR'; print $F[1]-1,"\t$score\n"}}' > out.stop.txt && \
+FACTOR=$(perl -ane '{$F[5]=$F[6] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}' "$SCOREFILE" | \
+  perl -ane 'BEGIN{$max_score=0}{if($F[3] eq "donor"){$score=log($F[5]*'"$MULT"'+1e-10);$max_score=$score if($score>$max_score);}}END{die("Incorrect scores in the input file: must be between 0 and 1!") if($max_score<=0);print int(1000/$max_score+0.5)}') || \
+  error_exit "Failed to calculate score factor" "$?"
+log "Multiplier is $MULT, Factor is $FACTOR"
+
+# Write each site file synchronously so failures stop before decoding.
+for SITE in donor acceptor start stop; do
+    case "$SITE" in
+        donor) SITE_FILE=out.gt.txt ;;
+        acceptor) SITE_FILE=out.ag.txt ;;
+        start) SITE_FILE=out.atg.txt ;;
+        stop) SITE_FILE=out.stop.txt ;;
+    esac
+    perl -ane '{$F[5]=$F[-1] if($#F>5);;print join("\t",@F),"\n" if($F[2] eq "+");}' "$SCOREFILE" | \
+      perl -ane '{if($F[3] eq "'"$SITE"'"){$score=log($F[5]*('"$MULT"')+1e-10)*'"$FACTOR"'; print $F[1]-1,"\t$score\n"}}END{close STDOUT or die "Cannot write site scores: $!"}' > "$SITE_FILE" || \
+      error_exit "Failed to prepare $SITE scores" "$?"
+done
 
 log "Building gene models" && \
 #also enforce MIN_CDS
-$MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>$OUTDEV | \
+"$MYPATH/uniann" "$FASTA" out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 2>"$OUTDEV" | \
   gffread --tlf |\
   perl -F'\t' -ane '{
     if($F[8]=~/exonCount=(1|2);exons=(\S+);CDS=(\d+):(\d+);CDSphase=\d/){
@@ -152,7 +161,7 @@ $MYPATH/uniann $FASTA out.ps.txt out.gt.txt out.ag.txt out.atg.txt out.stop.txt 
       print;
     }
   }' |\
-  gffread > $FASTA.gff.tmp && \
-mv $FASTA.gff.tmp $FASTA.uniann.gff
+  gffread > "$FASTA.gff.tmp" || error_exit "Failed to build gene models" "$?"
+mv "$FASTA.gff.tmp" "$FASTA.uniann.gff" || error_exit "Failed to save output GFF" "$?"
 
 echo "Output gff file is $FASTA.uniann.gff"
