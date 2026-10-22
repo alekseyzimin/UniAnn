@@ -123,18 +123,28 @@ vector<array<float, EMISSION_COLUMNS>> load_emissions(const string &file, int L)
         exit(1);
     }
 
+    // Rows past the sequence end are never read by the decoder. Skip them:
+    // convert_coding_frame.pl writes one such row when its input has a header.
+    long skipped = 0;
     string line;
     while (getline(in, line)) {
         if (line.empty() || line[0] == '#') continue;
         const char *cursor = line.c_str();
         int pos;
-        if (!parse_int_field(cursor, pos) || pos < 0 || pos >= L)
+        if (!parse_int_field(cursor, pos) || pos < 0)
             throw invalid_argument("Invalid emission position in " + file);
+        if (pos >= L) {
+            skipped++;
+            continue;
+        }
         for (int s = 0; s < EMISSION_COLUMNS; s++) {
             if (!parse_float_field(cursor, emit[pos][s]) || !isfinite(emit[pos][s]))
                 throw invalid_argument("Invalid emission value in " + file);
         }
     }
+    if (skipped)
+        cerr << "WARNING: skipped " << skipped << " emission rows past sequence length "
+             << L << " in " << file << "\n";
     return emit;
 }
 
