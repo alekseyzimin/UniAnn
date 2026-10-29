@@ -44,7 +44,7 @@ echo "uniann.sh [arguments]"
 echo "-f file sith a single fasta sequence"
 echo "-m multiplier to rescale probabilities before applying log, must be a number between 1 and 100, default: exp(1)"
 echo "-s file with scores for starts, stops and splice sites, 1-based coordinates"
-echo "-p coding frame score file"
+echo "-c coding frame score file"
 echo "-n (flag) do not save Viterbi matrix in out.err"
 }
 
