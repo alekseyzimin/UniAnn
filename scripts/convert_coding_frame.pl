@@ -15,12 +15,14 @@ while($seq =~ /TAA|TAG|TGA/g){
 print STDERR "Found stops\n";
 while($line=<STDIN>){
   chomp($line);
+  next if $line =~ /^chrom\tposition_1based\tstrand\t/;
   @F=split(/\t/,$line);
   for($i=3;$i<7;$i++){
     $F[$i]=1/(1+((1-$F[$i])/($F[$i]+1e-10))**(1/3));
   }
+  # Local codon class i at base n belongs to absolute frame (n-i)%3.
   for($i=0;$i<3;$i++){
-    $coding_frame[($n-$i-1)%3]=log(exp(1)*$F[$i+3]*(1-$F[6])+1e-10);
+    $coding_frame[($n-$i)%3]=log(exp(1)*$F[$i+3]*(1-$F[6])+1e-10);
   }
   $nc_score=log(exp(1)*$F[6]+1e-10);
   if($stops{($n-2)}){
