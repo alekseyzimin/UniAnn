@@ -4,7 +4,6 @@
 
 UniAnn is a universal **ab initio gene finder** for annotating protein-coding genes in genome sequences. It combines nucleotide-state emissions from a coding-frame model with start, stop, donor, and acceptor site scores, then uses a Viterbi hidden Markov model to produce a GFF3 gene annotation.
 
-This repository is a public fork of [alekseyzimin/UniAnn](https://github.com/alekseyzimin/UniAnn).
 
 ## Features
 
@@ -317,8 +316,4 @@ The C++ targets use only the C++ standard library. Perl and Bash scripts orchest
 
 UniAnn is released under the **GNU General Public License v3.0**. See [LICENSE](LICENSE) for the complete terms.
 
-## Upstream
 
-This repository is maintained as a fork of:
-
-- https://github.com/alekseyzimin/UniAnn
